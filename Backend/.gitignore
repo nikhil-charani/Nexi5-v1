@@ -1,0 +1,12 @@
+.env
+.env.local
+
+.env production
+.env staging
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+node_modules/
+
+
+
