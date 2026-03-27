@@ -247,7 +247,7 @@ function DashboardLayout() {
                 className="absolute bottom-[calc(100%+8px)] left-3 right-3 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[60] overflow-hidden"
               >
                 {[
-                  { label: "Profile", icon: User, onClick: () => navigate(`/dashboard/employees/${currentUser?.id}`) },
+                  { label: "Profile", icon: User, onClick: () => navigate(`/dashboard/my-profile`) },
                   { label: "Settings", icon: Settings, onClick: () => navigate('/dashboard/settings') },
                   { label: "Logout", icon: LogOut, onClick: handleLogout, danger: true }
                 ].map((item, i) => (

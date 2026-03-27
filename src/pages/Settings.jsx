@@ -1,16 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Save, User, Lock, Bell, Building, Globe, ShieldCheck, Mail, MapPin, Key, Fingerprint, Loader2, RefreshCw, ChevronRight, Smartphone, AlertTriangle, Laptop } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useAppContext } from "../hooks/useAppContext";
+
 function Settings() {
+    const { currentUser, userRole } = useAppContext();
     const [activeTab, setActiveTab] = useState("profile");
     const [saving, setSaving] = useState(false);
     const [accountForm, setAccountForm] = useState({
-        email: "admin@hrm.com",
-        phone: "+91 80 4567 8910",
-        name: "Ananya Iyer",
+        email: currentUser?.email || "",
+        phone: currentUser?.phone || "+91 80 4567 8910",
+        name: currentUser?.name || "",
         timezone: "Asia/Kolkata"
     });
+
+    useEffect(() => {
+        if (currentUser) {
+            setAccountForm(prev => ({
+                ...prev,
+                email: currentUser.email || prev.email,
+                name: currentUser.name || prev.name,
+                phone: currentUser.phone || prev.phone
+            }));
+        }
+    }, [currentUser]);
     const [security, setSecurity] = useState([
         { title: "Two-Factor Authentication (MFA)", desc: "Requires a secondary verification code on login.", icon: Fingerprint, enabled: true },
         { title: "Biometric Access", desc: "Enable FaceID or Fingerprint login on mobile.", icon: ShieldCheck, enabled: false },
@@ -203,12 +217,12 @@ function Settings() {
                                 <div className="group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 p-5 sm:p-8 mb-8 sm:mb-12 bg-gray-50 rounded-[32px] border border-gray-100 overflow-hidden shadow-sm transition-all hover:shadow-md">
                                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-[24px] sm:rounded-[32px] bg-gradient-to-br from-[#0f4184] to-[#0b3166] flex items-center justify-center text-white text-2xl sm:text-4xl font-bold shadow-2xl group-hover:scale-105 transition-transform border-4 border-white shrink-0">
-                                        {accountForm.name.charAt(0)}
+                                        {(accountForm.name || "U").charAt(0).toUpperCase()}
                                     </div>
                                     <div className="relative z-10">
-                                        <h4 className="text-lg sm:text-xl font-bold text-textPrimary leading-none">{accountForm.name}</h4>
+                                        <h4 className="text-lg sm:text-xl font-bold text-textPrimary leading-none">{accountForm.name || "User"}</h4>
                                         <p className="text-[11px] font-bold text-textSecondary uppercase tracking-widest mt-2 sm:mt-3 flex items-center gap-2">
-                                            <ShieldCheck size={12} className="text-primary" /> System Super-Admin • ID: #ADMIN-2024
+                                            <ShieldCheck size={12} className="text-primary" /> {userRole || "Employee"} • ID: {currentUser?.employeeId || currentUser?.uid || currentUser?.id || "N/A"}
                                         </p>
                                         <div className="flex items-center gap-3 sm:gap-4 mt-4 sm:mt-6 flex-wrap">
                                             <button onClick={() => toast.info("File browser opened")} className="px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-textPrimary text-[11px] font-bold uppercase tracking-widest rounded-xl shadow-sm border border-gray-200 hover:bg-gray-50 transition-all hover:border-primary/20">Update Photo</button>
