@@ -15,7 +15,6 @@ import Performance from "./pages/Performance";
 import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
 import EmployeeProfile from "./pages/EmployeeProfile";
-import MyProfile from "./pages/MyProfile";
 import Directory from "./pages/Directory";
 import OrgChart from "./pages/OrgChart";
 import Tasks from "./pages/Tasks";
@@ -68,7 +67,6 @@ const AppRoutes = () => {
           <Route path="performance" element={<Performance />} />
           <Route path="documents" element={<Documents />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="my-profile" element={<MyProfile />} />
           <Route path="directory" element={<Directory />} />
           <Route path="org-chart" element={<OrgChart />} />
           <Route path="tasks" element={<Tasks />} />

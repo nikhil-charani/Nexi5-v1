@@ -163,7 +163,7 @@ Password: ${newCredentials.password}`);
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.03, duration: 0.2 }}
-              key={emp.uid || emp.id || index}
+              key={emp.id}
               className="group hover:bg-[#F0F9FF] transition-colors cursor-pointer"
             >
               <td className="px-6 py-4">
@@ -181,7 +181,7 @@ Password: ${newCredentials.password}`);
                 </div>
               </td>
               <td className="px-6 py-4">
-                <span className="text-xs font-mono font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">{emp.employeeId || emp.uid || emp.id}</span>
+                <span className="text-xs font-mono font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">{emp.id}</span>
               </td>
               <td className="px-6 py-4">
                 <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#0f4184]/10 text-[#0b3166]">{emp.department}</span>
@@ -191,11 +191,11 @@ Password: ${newCredentials.password}`);
               <td className="px-6 py-4 text-right">
                 <div className="flex justify-end gap-1">
                   <button
-                    onClick={() => navigate(`/dashboard/employees/${emp.uid || emp.id}`)}
+                    onClick={() => navigate(`/dashboard/employees/${emp.id}`)}
                     className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors"
                     title="View Profile"
                   >
-                    <Eye size={18} />
+                    <Eye size={16} />
                   </button>
 
                   {isAdminOrHRHead && (
@@ -207,7 +207,7 @@ Password: ${newCredentials.password}`);
                       }
                     >
                       <DropdownMenuItem onClick={() => handleEdit(emp)}><Edit2 size={14} /> Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(emp.uid || emp.id)} destructive><Trash2 size={14} /> Delete</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(emp.id)} destructive><Trash2 size={14} /> Delete</DropdownMenuItem>
                     </DropdownMenu>
                   )}
                 </div>

@@ -133,7 +133,7 @@ function Directory() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        onClick={() => navigate(`/dashboard/employees/${emp.uid || emp.id}`)}
+                        onClick={() => navigate(`/dashboard/employees/${emp.id}`)}
                         className="bg-white rounded-[24px] p-6 border border-gray-100 cursor-pointer group relative overflow-hidden h-full flex flex-col shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all"
                     >
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
@@ -171,7 +171,7 @@ function Directory() {
                             <div className="flex flex-col gap-2 pt-1">
                                 <div className="flex items-center gap-2.5 text-[12px] font-medium text-textSecondary group-hover:text-textPrimary transition-colors">
                                     <Mail size={14} className="shrink-0 text-gray-400" />
-                                    <span className="truncate">{(emp.email || `${(emp.name || "user").replace(/\s+/g, ".")}@nexi5.com`).toLowerCase()}</span>
+                                    <span className="truncate">{(emp.id || emp.uid || "user")?.toLowerCase()}@nexi5.com</span>
                                 </div>
                                 <div className="flex items-center gap-2.5 text-[12px] font-medium text-textSecondary group-hover:text-textPrimary transition-colors">
                                     <Phone size={14} className="shrink-0 text-gray-400" />
