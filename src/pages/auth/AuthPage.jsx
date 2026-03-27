@@ -64,6 +64,7 @@ export default function AuthPage({ initialRegister = false }) {
                         onLogin={handleLogin}
                         onRegister={handleRegister}
                         roleOptions={roleOptions}
+                        initialView={initialRegister ? 'register' : 'login'}
                     />
                 </AuthCard>
             </AuthLayout>

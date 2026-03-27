@@ -12,7 +12,7 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } })); // allow cross-origin API requests
 // dynamically allow the request origin
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: true, credentials: true, allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Role'] }));
 app.use(express.json()); // parse the body
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
@@ -40,6 +40,8 @@ const io = require("socket.io")(server, {
     credentials: true
   }
 });
+
+app.set("io", io);
 
 io.on("connection",(socket)=>{
    console.log("User connected")
