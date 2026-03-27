@@ -20,7 +20,8 @@ const employeeSchema = z.object({
 });
 
 export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
-  const { addEmployee, updateEmployee } = useAppContext();
+  const { addEmployee, updateEmployee, userRole } = useAppContext();
+  const isAdminOrHR = ["Admin", "HR Head", "HR"].includes(userRole);
   const isEditing = !!employeeToEdit;
 
   const {
@@ -266,7 +267,8 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
                     <input
                       {...register("department")}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                      disabled={!isAdminOrHR}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all disabled:opacity-50"
                       placeholder="e.g. Engineering"
                     />
                     {errors.department && <p className="mt-1 text-xs text-rose-500">{errors.department.message}</p>}
@@ -276,7 +278,8 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Designation</label>
                     <input
                       {...register("designation")}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                      disabled={!isAdminOrHR}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all disabled:opacity-50"
                       placeholder="e.g. Frontend Developer"
                     />
                     {errors.designation && <p className="mt-1 text-xs text-rose-500">{errors.designation.message}</p>}
@@ -286,7 +289,8 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Manager</label>
                     <input
                       {...register("manager")}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                      disabled={!isAdminOrHR}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all disabled:opacity-50"
                       placeholder="e.g. John Smith"
                     />
                     {errors.manager && <p className="mt-1 text-xs text-rose-500">{errors.manager.message}</p>}
@@ -298,7 +302,8 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                       <input
                         type="date"
                         {...register("joiningDate")}
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                        disabled={!isAdminOrHR}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all disabled:opacity-50"
                       />
                       {errors.joiningDate && <p className="mt-1 text-xs text-rose-500">{errors.joiningDate.message}</p>}
                     </div>
@@ -307,7 +312,8 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
                       <select
                         {...register("status")}
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                        disabled={!isAdminOrHR}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all disabled:opacity-50"
                       >
                         <option value="Active">Active</option>
                         <option value="On Leave">On Leave</option>
@@ -317,6 +323,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                     </div>
                   </div>
 
+                  {isAdminOrHR && (
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Payroll Details</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -343,6 +350,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                       </div>
                     </div>
                   </div>
+                  )}
                 </form>
               )}
             </div>
