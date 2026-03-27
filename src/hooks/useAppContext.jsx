@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getCookie, setCookie, eraseCookie } from "../lib/cookieUtils";
+import { io } from "socket.io-client";
 
 const AppContext = createContext(undefined);
 
@@ -100,6 +101,13 @@ export function AppProvider({ children }) {
           const data = await resp.json();
           return data.success ? data.data : [];
         },
+        calendarEvents: async () => {
+          const resp = await fetch(`${API_BASE_URL}/calendar/events`, { 
+            headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+          });
+          const data = await resp.json();
+          return data.success ? data.data : [];
+        },
         tasks: async () => {
           const resp = await fetch(`${API_BASE_URL}/gettask`, { 
             method: "POST", 
@@ -117,6 +125,7 @@ export function AppProvider({ children }) {
             case "employees": setEmployees(data); break;
             case "leaves": setLeaves(data); break;
             case "attendanceHistory": setAttendance(data); break;
+            case "calendarEvents": setCalendarEvents(data); break;
             case "tasks": setTasks(data); break;
             case "attendanceStatus": 
               if (data && data.success) {
@@ -146,6 +155,33 @@ export function AppProvider({ children }) {
 
     doFetch();
   }, [isLoggedIn, currentUser?.token]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    // Connect Socket
+    let socketUrl = API_BASE_URL.replace('/api', '');
+    const socket = io(socketUrl, {
+      withCredentials: true
+    });
+
+    socket.on('calendarEventAdded', (newEvent) => {
+      setCalendarEvents(prev => {
+        if (prev.find(e => e.id === newEvent.id)) return prev;
+        return [...prev, newEvent];
+      });
+    });
+
+    socket.on('calendarEventUpdated', (updatedEvent) => {
+      setCalendarEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+    });
+
+    socket.on('calendarEventDeleted', ({ id }) => {
+      setCalendarEvents(prev => prev.filter(e => e.id !== id));
+    });
+
+    return () => socket.disconnect();
+  }, [isLoggedIn]);
 
   // If not logged in, stop loading immediately
   useEffect(() => {
@@ -323,7 +359,84 @@ export function AppProvider({ children }) {
   const addCandidate = (c) => createItem("candidates", c, setCandidates);
   const updateCandidate = (id, data) => updateItem("candidates", id, data, setCandidates);
   
-  const addCalendarEvent = (event) => createItem("calendarEvents", event, setCalendarEvents);
+  const addCalendarEvent = async (event) => {
+    try {
+      const role = currentUser?.role;
+      const userId = currentUser?.id || currentUser?.uid;
+      
+      const payload = { 
+        ...event,
+        creatorRole: role || "Unknown",
+        createdBy: event.createdBy || userId || currentUser?.name || "Unknown"
+      };
+      
+      if (role === "Employee") {
+          payload.type = "leave";
+      }
+
+      const response = await fetch(`${API_BASE_URL}/calendar/add-event`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.success) {
+        const newEv = data.data;
+        setCalendarEvents(prev => prev.some(e => e.id === newEv.id) ? prev : [newEv, ...prev]);
+      }
+      return { success: data.success, error: data.message };
+    } catch (error) {
+      console.error("Error adding calendar event:", error);
+      return { success: false, error: "Network error" };
+    }
+  };
+
+  const updateCalendarEvent = async (id, updatedData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/calendar/update-event/${id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`,
+          "X-User-Role": currentUser?.role
+        },
+        body: JSON.stringify(updatedData)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCalendarEvents(prev => prev.map(e => e.id === id ? { ...e, ...updatedData } : e));
+      }
+      return { success: data.success, error: data.message };
+    } catch (error) {
+      console.error("Error updating calendar event:", error);
+      return { success: false, error: "Network error" };
+    }
+  };
+
+  const deleteCalendarEvent = async (id) => {
+    try {
+      console.log(`Frontend: Requesting delete for event ID: ${id}`);
+      const response = await fetch(`${API_BASE_URL}/calendar/delete-event/${id}`, {
+        method: "DELETE",
+        headers: { 
+          "Authorization": `Bearer ${currentUser?.token}`,
+          "X-User-Role": currentUser?.role
+        }
+      });
+      const data = await response.json();
+      console.log(`Frontend: Delete response:`, data);
+      if (data.success) {
+        setCalendarEvents(prev => prev.filter(e => e.id !== id));
+      }
+      return { success: data.success, error: data.message };
+    } catch (error) {
+      console.error("Error deleting calendar event:", error);
+      return { success: false, error: "Network error" };
+    }
+  };
   
   const addProject = (p) => createItem("projects", p, setProjects);
   const addModule = (projectId, m) => {
@@ -382,7 +495,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       employees, setEmployees, leaves, setLeaves,
       candidates, setCandidates, addCandidate, updateCandidate,
-      calendarEvents, addCalendarEvent,
+      calendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
       projects, setProjects, addProject, addModule, updateModuleProgress,
       grievances, addGrievance, updateGrievanceStatus,
       leads, setLeads, addLead, updateLead,

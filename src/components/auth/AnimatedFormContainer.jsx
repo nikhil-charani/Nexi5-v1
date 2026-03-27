@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 
-export default function AnimatedFormContainer({ onLogin, onRegister, roleOptions }) {
-    const [activeView, setActiveView] = useState('login');
+export default function AnimatedFormContainer({ onLogin, onRegister, roleOptions, initialView = 'login' }) {
+    const [activeView, setActiveView] = useState(initialView);
+
+    useEffect(() => {
+        setActiveView(initialView);
+    }, [initialView]);
 
     const variants = {
         hidden: {

@@ -9,6 +9,7 @@ const {createpay,payslips}=require('../controllers/payrollcontroller')
 const {performance} = require('../controllers/performancecontroller')
 //employee routes
 const {createtask,gettasks,updatetaskstatus} = require('../controllers/taskcontroller')
+const {addEvent, getEvents, updateEvent, deleteEvent} = require('../controllers/calendarcontroller')
 
 // Auth routes — matches frontend's { name, email, password, role }
 router.post("/register", registerUser)
@@ -32,6 +33,12 @@ router.post('/createtask',createtask)
 router.post('/gettask',gettasks)
 router.post('/updatetaskstatus',updatetaskstatus)
 router.post('/performance',performance)
+
+// Calendar Routes
+router.post('/calendar/add-event', verifyToken, addEvent)
+router.get('/calendar/events', verifyToken, getEvents)
+router.put('/calendar/update-event/:id', verifyToken, updateEvent)
+router.delete('/calendar/delete-event/:id', verifyToken, deleteEvent)
 router.get('/me', verifyToken, (req, res) => {
     res.json({ success: true, user: req.user });
 })
