@@ -22,19 +22,26 @@ function Leave() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [form, setForm] = useState({ type: "Sick Leave", startDate: "", endDate: "", reason: "" });
-    const visibleLeaves = useMemo(() => {
+    const [processingId, setProcessingId] = useState(null);
+    const baseLeaves = useMemo(() => {
         let data = leaves;
-        if (userRole === "Employee") data = leaves.filter((l) => l.employeeId === currentUser?.id);
-        else if (isManager) {
+        if (userRole === "Employee") {
+            data = leaves.filter((l) => l.employeeId === currentUser?.uid);
+        } else if (isManager) {
             const teamIds = employees.filter((e) => e.manager === currentUser?.name).map((e) => e.id);
             data = leaves.filter((l) => teamIds.includes(l.employeeId));
         }
+        return data;
+    }, [leaves, userRole, currentUser, employees]);
+
+    const visibleLeaves = useMemo(() => {
+        let data = baseLeaves;
         if (statusFilter !== "All") data = data.filter((l) => l.status === statusFilter);
         if (search) data = data.filter(
             (l) => l.employeeName.toLowerCase().includes(search.toLowerCase()) || l.type.toLowerCase().includes(search.toLowerCase()) || l.reason.toLowerCase().includes(search.toLowerCase())
         );
         return data;
-    }, [leaves, userRole, currentUser, employees, statusFilter, search, isManager]);
+    }, [baseLeaves, statusFilter, search]);
     const dashboardTitle = userRole === "Employee" ? "My Leave Requests" : isManager ? "Team Leave Requests" : "All Leave Requests";
     const handleSubmit = () => {
         if (!form.startDate || !form.endDate || !form.reason.trim()) {
@@ -46,7 +53,7 @@ function Leave() {
             return;
         }
         addLeave({
-            employeeId: currentUser.id,
+            employeeId: currentUser.uid,
             employeeName: currentUser.name,
             department: currentUser.department,
             type: form.type,
@@ -61,19 +68,10 @@ function Leave() {
         toast.success("Leave Applied!", { description: "Your request is pending approval from HR." });
     };
     const counts = {
-        All: visibleLeaves.length + (statusFilter !== "All" ? 0 : 0),
-        Pending: leaves.filter((l) => {
-            if (userRole === "Employee") return l.employeeId === currentUser?.id && l.status === "Pending";
-            return l.status === "Pending";
-        }).length,
-        Approved: leaves.filter((l) => {
-            if (userRole === "Employee") return l.employeeId === currentUser?.id && l.status === "Approved";
-            return l.status === "Approved";
-        }).length,
-        Rejected: leaves.filter((l) => {
-            if (userRole === "Employee") return l.employeeId === currentUser?.id && l.status === "Rejected";
-            return l.status === "Rejected";
-        }).length
+        All: baseLeaves.length,
+        Pending: baseLeaves.filter(l => l.status === "Pending").length,
+        Approved: baseLeaves.filter(l => l.status === "Approved").length,
+        Rejected: baseLeaves.filter(l => l.status === "Rejected").length
     };
     return <div className="space-y-5">
         {
@@ -85,7 +83,7 @@ function Leave() {
                     <CalendarClock size={24} className="shrink-0" />
                     <h1 className="text-2xl font-bold tracking-tight text-textPrimary">Leave Management</h1>
                 </div>
-                <p className="text-textSecondary text-sm font-medium">{dashboardTitle}</p>
+                <p className="text-textSecondary text-sm font-medium">{dashboardTitle} ({counts.All})</p>
             </div>
             {canApply && (
                 <button
@@ -209,15 +207,27 @@ function Leave() {
                                 {leave.status === "Pending" ? <DropdownMenu trigger={<button className="p-2 text-gray-400 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors">
                                     <MoreVertical size={18} />
                                 </button>}>
-                                    <DropdownMenuItem onClick={() => {
-                                        approveLeave(leave.id);
-                                        toast.success("Leave Approved", { description: `${leave.employeeName}'s request approved.` });
+                                    <DropdownMenuItem onClick={async () => {
+                                        setProcessingId(leave.id);
+                                        const result = await approveLeave(leave.id);
+                                        setProcessingId(null);
+                                        if (result?.success) {
+                                            toast.success("Leave Approved", { description: `${leave.employeeName}'s request approved.` });
+                                        } else {
+                                            toast.error("Failed to Approve", { description: result?.error || "Something went wrong." });
+                                        }
                                     }} className="text-[#0b3166]">
                                         <Check size={14} /> Approve
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                        rejectLeave(leave.id);
-                                        toast.error("Leave Rejected", { description: `${leave.employeeName}'s request rejected.` });
+                                    <DropdownMenuItem onClick={async () => {
+                                        setProcessingId(leave.id);
+                                        const result = await rejectLeave(leave.id);
+                                        setProcessingId(null);
+                                        if (result?.success) {
+                                            toast.success("Leave Rejected", { description: `${leave.employeeName}'s request rejected.` });
+                                        } else {
+                                            toast.error("Failed to Reject", { description: result?.error || "Something went wrong." });
+                                        }
                                     }} destructive>
                                         <X size={14} /> Reject
                                     </DropdownMenuItem>
@@ -311,3 +321,5 @@ function Leave() {
 export {
     Leave as default
 };
+
+

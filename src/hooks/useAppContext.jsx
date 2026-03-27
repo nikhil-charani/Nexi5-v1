@@ -349,8 +349,56 @@ export function AppProvider({ children }) {
   };
 
   const addLeave = (leave) => createItem("applyleave", leave, setLeaves);
-  const approveLeave = (id) => createItem(`approveleave/${id}`, {}, setLeaves, "POST");
-  const rejectLeave = (id) => updateItem("leaves", id, { status: "Rejected" }, setLeaves);
+  
+  const approveLeave = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/approveleave/${id}`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify({})
+      });
+      const resData = await response.json();
+      
+      if (!response.ok || resData.success === false) {
+        return { success: false, error: resData.error || resData.message || 'Failed to approve leave' };
+      }
+      
+      const updatedLeave = resData.data;
+      setLeaves(prev => prev.map(l => l.id === id ? { ...l, ...updatedLeave } : l));
+      return { success: true, data: updatedLeave };
+    } catch (error) {
+      console.error(`Error approving leave:`, error);
+      return { success: false, error: "Network error" };
+    }
+  };
+  
+  const rejectLeave = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rejectleave/${id}`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify({})
+      });
+      const resData = await response.json();
+      
+      if (!response.ok || resData.success === false) {
+        return { success: false, error: resData.error || resData.message || 'Failed to reject leave' };
+      }
+      
+      const updatedLeave = resData.data;
+      setLeaves(prev => prev.map(l => l.id === id ? { ...l, ...updatedLeave } : l));
+      return { success: true, data: updatedLeave };
+    } catch (error) {
+      console.error(`Error rejecting leave:`, error);
+      return { success: false, error: "Network error" };
+    }
+  };
   
   const addEmployee = (emp) => createItem("employees", emp, setEmployees);
   const updateEmployee = (id, data) => updateItem("update", id, data, setEmployees);
