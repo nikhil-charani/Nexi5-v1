@@ -4,15 +4,9 @@ const verifyToken = async (req, res, next) => {
     try {
         const header = req.headers.authorization;
         
-        // If no header or invalid format, provide a fallback "dev" user instead of 401
+        // Block access if auth header is missing/invalid.
         if (!header || !header.startsWith("Bearer ")) {
-            console.warn(`No valid auth header for ${req.path}. Providing dev-user fallback.`);
-            req.user = {
-                uid: "dev-user-123",
-                email: "dev@example.com",
-                role: "Admin"
-            };
-            return next();
+            return res.status(401).json({ success: false, error: "Unauthorized" });
         }
 
         const token = header.split(" ")[1];
@@ -82,14 +76,7 @@ const verifyToken = async (req, res, next) => {
     }
     catch (error) {
         console.error("Auth Middleware Error:", error.message);
-        // Fallback user even on error to prevent blocking the request during development
-        req.user = {
-            uid: "dev-user-error",
-            id: "dev-user-error",
-            email: "dev@example.com",
-            role: "Admin"
-        };
-        next();
+        return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 }
 

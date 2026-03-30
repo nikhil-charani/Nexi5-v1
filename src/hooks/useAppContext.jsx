@@ -230,16 +230,34 @@ export function AppProvider({ children }) {
     }
   };
 
-  const login = async (email, password, role) => {
+  const login = async (email, password, role, username) => {
     try {
+      const body = {};
+      if (role === "Employee" && username) {
+        body.username = username;
+      } else {
+        body.email = email;
+      }
+      body.password = password;
+
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(body)
       });
       const data = await response.json();
       
       if (data.success) {
+        if (data.requiresPasswordChange === true) {
+          return {
+            success: true,
+            requiresPasswordChange: true,
+            uid: data.user?.uid,
+            email: data.user?.email,
+            role: data.user?.role,
+          };
+        }
+
         let user = { ...data.user, token: data.token };
         if (role) user = { ...user, role };
         setIsLoggedIn(true);
@@ -251,6 +269,27 @@ export function AppProvider({ children }) {
       return { success: false, error: data.error };
     } catch (error) {
       console.error("Login error:", error);
+      return { success: false, error: "Network error" };
+    }
+  };
+
+  const changePassword = async (uidOrEmail, newPassword) => {
+    try {
+      const body = { newPassword };
+      if (uidOrEmail && uidOrEmail.includes("@")) {
+        body.email = uidOrEmail;
+      } else {
+        body.uid = uidOrEmail;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Change password error:", error);
       return { success: false, error: "Network error" };
     }
   };
@@ -550,7 +589,7 @@ export function AppProvider({ children }) {
       clients, setClients, addClient,
       deals, setDeals, addDeal, updateDeal,
       currentUser, userRole: currentUser?.role ?? null,
-      isLoggedIn, register, login, logout,
+      isLoggedIn, register, login, logout, changePassword,
       isCheckedIn, checkInTime, checkIn, checkOut,
       addLeave, approveLeave, rejectLeave,
       addEmployee, updateEmployee, deleteEmployee,
