@@ -5,18 +5,18 @@ import { useAppContext } from "../hooks/useAppContext";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const eventTypeStyles = {
-  leave: { badge: "badge-warning", dot: "bg-amber-500", bg: "bg-cyan-600", iconColor: "text-amber-500" },
   holiday: { badge: "badge-danger", dot: "bg-rose-500", bg: "bg-cyan-600", iconColor: "text-rose-500" },
   event: { badge: "badge-info", dot: "bg-cyan-500", bg: "bg-cyan-600", iconColor: "text-cyan-500" },
-  meeting: { badge: "badge-secondary", dot: "bg-purple-500", bg: "bg-cyan-600", iconColor: "text-purple-500" }
+  meeting: { badge: "badge-secondary", dot: "bg-purple-500", bg: "bg-cyan-600", iconColor: "text-purple-500" },
+  weekend: { badge: "bg-slate-100/50 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400 border-none", dot: "bg-slate-400", bg: "bg-slate-600", iconColor: "text-slate-400" }
 };
 function CalendarView() {
   const { calendarEvents, addCalendarEvent, userRole } = useAppContext();
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 11, 1));
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", date: "", type: "event", description: "" });
-  const canAddEvent = ["Admin", "HR Head", "HR Recruiter"].includes(userRole || "");
+  const canAddEvent = userRole === "HR Head";
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
@@ -24,11 +24,47 @@ function CalendarView() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const formatDateKey = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  
+  const getWeekday = (day) => {
+    let d = new Date(year, month, day);
+    if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sunday -> Monday
+    if (d.getDay() === 6) d.setDate(d.getDate() - 1); // Saturday -> Friday
+    return d.getDate();
+  };
+
+  const today = new Date().getDate();
+
+  const SAMPLE_EVENTS = [
+    { id: "s1", title: "Independence Day", type: "holiday", date: `${year}-08-15`, description: "National Holiday" },
+    { id: "s2", title: "Christmas", type: "holiday", date: `${year}-12-25`, description: "Company Holiday" },
+    { id: "s3", title: "New Year", type: "holiday", date: `${year}-01-01`, description: "Company Holiday" },
+    { id: "s6", title: "Annual Day", type: "event", date: formatDateKey(getWeekday(15)), description: "Company annual celebration", time: "5:00 PM" },
+    { id: "s7", title: "HR Workshop", type: "event", date: formatDateKey(getWeekday(20)), description: "Policy updates", time: "10:00 AM" },
+    { id: "s8", title: "Team Sync", type: "meeting", date: formatDateKey(getWeekday(10)), description: "Weekly sync up", time: "11:00 AM" },
+    { id: "s9", title: "Project Review", type: "meeting", date: formatDateKey(getWeekday(12)), description: "Q3 Project milestones", time: "2:00 PM" }
+  ];
+
+  let allEvents = [...calendarEvents, ...SAMPLE_EVENTS].filter(e => e.type !== "leave");
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month, d);
+    const dayOfWeek = dateObj.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      allEvents.push({
+        id: `weekend-${year}-${month}-${d}`,
+        title: "Weekend",
+        type: "weekend",
+        date: formatDateKey(d),
+        description: "Weekly off"
+      });
+    }
+  }
+
   const eventsForDate = (d) => {
     const key = formatDateKey(d);
-    return calendarEvents.filter((e) => e.date === key);
+    return allEvents.filter((e) => e.date === key);
   };
-  const selectedEvents = selectedDate ? calendarEvents.filter((e) => e.date === selectedDate) : [];
+  const selectedEvents = selectedDate ? allEvents.filter((e) => e.date === selectedDate) : [];
   const handleAddEvent = () => {
     if (!newEvent.title || !newEvent.date) return;
     addCalendarEvent(newEvent);
@@ -108,20 +144,31 @@ function CalendarView() {
             {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/30 bg-slate-50/20 dark:bg-slate-950/10" />)}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
+              const dateObj = new Date(year, month, day);
+              const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
               const dateKey = formatDateKey(day);
               const dayEvents = eventsForDate(day);
               const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
               const isSelected = selectedDate === dateKey;
+              
+              const baseBg = isWeekend ? "bg-slate-50/40 dark:bg-slate-900/30" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30";
+              const selectedBg = "bg-cyan-50/30 dark:bg-cyan-900/10";
+
               return <motion.div
                 key={day}
                 onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/60 p-2 cursor-pointer transition-all relative group ${isSelected ? "bg-cyan-50/30 dark:bg-cyan-900/10" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"}`}
+                className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/60 p-2 cursor-pointer transition-all relative group ${isSelected ? selectedBg : baseBg} ${isWeekend ? "opacity-75 hover:opacity-100" : ""}`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black transition-all ${isToday ? "bg-cyan-600 text-white shadow-md" : isSelected ? "text-cyan-600 font-black" : "text-slate-500 dark:text-slate-400 font-bold group-hover:text-slate-900 dark:group-hover:text-white"}`}>
                     {day}
                   </span>
-                  {dayEvents.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]" />}
+                  <div className="flex gap-1 flex-wrap justify-end max-w-[50%]">
+                    {dayEvents.map((ev, idx) => {
+                      const style = eventTypeStyles[ev.type] || eventTypeStyles.event;
+                      return <span key={`dot-${idx}`} className={`w-1.5 h-1.5 rounded-full ${style.dot} shadow-sm`} title={ev.title} />;
+                    })}
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -183,7 +230,10 @@ function CalendarView() {
                   <div className={`w-2 h-2 rounded-full ${style.dot}`} />
                   <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{ev.type}</span>
                 </div>
-                <p className="font-black text-slate-800 dark:text-white text-sm leading-tight">{ev.title}</p>
+                <div className="flex justify-between items-start">
+                  <p className="font-black text-slate-800 dark:text-white text-sm leading-tight">{ev.title}</p>
+                  {ev.time && <span className="text-[10px] font-bold text-slate-500 bg-white/50 dark:bg-slate-900/50 px-2 py-0.5 rounded-md">{ev.time}</span>}
+                </div>
                 {ev.description && <p className="text-xs mt-2 text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{ev.description}</p>}
               </motion.div>;
             }) : <div className="py-8 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
@@ -202,7 +252,7 @@ function CalendarView() {
             Coming Up
           </h3>
           <div className="space-y-4">
-            {calendarEvents.slice(-4).map((ev) => {
+            {allEvents.filter(e => e.type !== "weekend").slice(0, 4).map((ev) => {
               const style = eventTypeStyles[ev.type] || eventTypeStyles.event;
               return <div key={ev.id} className="flex gap-3 group cursor-pointer">
                 <div className={`w-1 rounded-full ${style.dot} opacity-40 group-hover:opacity-100 transition-opacity`} />
@@ -220,11 +270,13 @@ function CalendarView() {
         }
         <div className="page-card p-5 bg-gradient-to-br from-cyan-50 dark:from-slate-900 to-transparent">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Color Map</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(eventTypeStyles).map(([type, style]) => <div key={type} className="flex items-center gap-2 p-1.5 rounded-lg border border-slate-50 dark:border-slate-800 bg-white/50 dark:bg-slate-800/30 shadow-sm">
-              <div className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-              <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate">{type}</span>
-            </div>)}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {Object.entries(eventTypeStyles).map(([type, style]) => (
+              <div key={type} className={`flex items-center gap-2 p-2 rounded-xl border border-slate-100 dark:border-slate-800/60 shadow-sm transition-all ${style.badge} bg-opacity-20`}>
+                <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${style.dot}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-90">{type}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -289,7 +341,6 @@ function CalendarView() {
                     <option value="event">Event</option>
                     <option value="meeting">Meeting</option>
                     <option value="holiday">Holiday</option>
-                    <option value="leave">Leave</option>
                   </select>
                   <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400 pointer-events-none" />
                 </div>
