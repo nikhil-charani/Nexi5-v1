@@ -7,7 +7,7 @@ const { sendEmployeeCredentials } = require("../config/emailService");
  */
 const generateTempPassword = () => {
     const suffix = Math.random().toString(36).slice(-6).toUpperCase();
-    return `Emp@${suffix}`;
+    return `EMP@${suffix}`;
 };
 
 /**
@@ -101,8 +101,12 @@ const createEmployee = async (req, res, next) => {
 
         await db.collection("employees").doc(userRecord.uid).set({
             status: status.toLowerCase(),
+            mustChangePassword: true, // Force password change on first login
             leaveBalance: { casual: 12, sick: 10, annual: 15 },
-            employeeData,
+            employeeData: {
+                ...employeeData,
+                mustChangePassword: true
+            },
         });
 
         // 6. Send credentials email (Background)

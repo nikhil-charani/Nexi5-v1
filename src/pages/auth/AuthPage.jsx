@@ -9,7 +9,7 @@ import './auth.css';
 
 export default function AuthPage({ initialRegister = false }) {
     const navigate = useNavigate();
-    const { login, register, isLoggedIn } = useAppContext();
+    const { login, register, isLoggedIn, changePassword } = useAppContext();
 
     useEffect(() => {
         if (isLoggedIn) {
@@ -28,13 +28,43 @@ export default function AuthPage({ initialRegister = false }) {
     ];
 
     const handleLogin = async (data) => {
-        const { email, password, role } = data;
-        const result = await login(email, password, role);
-        if (result.success) {
+        const role = data?.role;
+
+        if (role === 'Employee') {
+            const { username, password, isFirstLogin, newPassword } = data;
+            const result = await login("", password, role, username);
+
+            if (!result.success) {
+                alert(result.error || 'Invalid credentials');
+                return;
+            }
+
+            if (result.requiresPasswordChange === true) {
+                if (isFirstLogin && newPassword) {
+                    const changeRes = await changePassword(result.uid, newPassword);
+                    if (changeRes?.success) {
+                        // Login again to set auth cookies with the updated password.
+                        const second = await login("", newPassword, role, username);
+                        if (second?.success) navigate('/dashboard');
+                        else alert(second?.error || 'Please login again with your new password');
+                    } else {
+                        alert(changeRes?.error || 'Failed to change password');
+                    }
+                    return;
+                }
+
+                alert('Account security: This is your first login. Please check the "First login? Change password" box above and set your permanent password before signing in.');
+                return;
+            }
+
             navigate('/dashboard');
-        } else {
-            alert(result.error || 'Invalid credentials');
+            return;
         }
+
+        const { email, password } = data;
+        const result = await login(email, password, role);
+        if (result.success) navigate('/dashboard');
+        else alert(result.error || 'Invalid credentials');
     };
 
     const handleRegister = async (data) => {
