@@ -1,18 +1,62 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalendarIcon, Clock, Bell } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const eventTypeStyles = {
-  leave: { badge: "badge-warning", dot: "bg-amber-500", bg: "bg-cyan-600", iconColor: "text-amber-500" },
-  holiday: { badge: "badge-danger", dot: "bg-rose-500", bg: "bg-cyan-600", iconColor: "text-rose-500" },
-  event: { badge: "badge-info", dot: "bg-cyan-500", bg: "bg-cyan-600", iconColor: "text-cyan-500" },
-  meeting: { badge: "badge-secondary", dot: "bg-purple-500", bg: "bg-cyan-600", iconColor: "text-purple-500" }
+  leave: { badge: "badge-warning", dot: "bg-amber-500", bg: "bg-amber-500", iconColor: "text-amber-500" },
+  holiday: { badge: "badge-danger", dot: "bg-rose-500", bg: "bg-rose-500", iconColor: "text-rose-500" },
+  event: { badge: "badge-info", dot: "bg-cyan-500", bg: "bg-cyan-500", iconColor: "text-cyan-500" },
+  meeting: { badge: "badge-secondary", dot: "bg-purple-500", bg: "bg-purple-500", iconColor: "text-purple-500" }
 };
+
+const HOLIDAYS_2026 = [
+  { id: "h1", title: "New Year Day", date: "2026-01-01", type: "holiday", description: "Thursday" },
+  { id: "h2", title: "Sankranti/Pongal", date: "2026-01-15", type: "holiday", description: "Thursday" },
+  { id: "h3", title: "Republic Day", date: "2026-01-26", type: "holiday", description: "Monday" },
+  { id: "h4", title: "Holi", date: "2026-03-03", type: "holiday", description: "Tuesday" },
+  { id: "h5", title: "Ugadi", date: "2026-03-19", type: "holiday", description: "Thursday" },
+  { id: "h6", title: "Ramzan", date: "2026-03-21", type: "holiday", description: "Saturday" },
+  { id: "h7", title: "May Day", date: "2026-05-01", type: "holiday", description: "Friday" },
+  { id: "h8", title: "Bakri Id", date: "2026-05-27", type: "holiday", description: "Wednesday" },
+  { id: "h9", title: "Telangana Formation Day", date: "2026-06-02", type: "holiday", description: "Tuesday" },
+  { id: "h10", title: "Independence Day", date: "2026-08-15", type: "holiday", description: "Saturday" },
+  { id: "h11", title: "Ganesh Chaturthi", date: "2026-09-14", type: "holiday", description: "Monday" },
+  { id: "h12", title: "Gandhi Jayanthi", date: "2026-10-02", type: "holiday", description: "Friday" },
+  { id: "h13", title: "Bathukamma", date: "2026-10-18", type: "holiday", description: "Sunday" },
+  { id: "h14", title: "Dussehra", date: "2026-10-20", type: "holiday", description: "Tuesday" },
+  { id: "h15", title: "Diwali", date: "2026-11-08", type: "holiday", description: "Sunday" },
+  { id: "h16", title: "Christmas", date: "2026-12-25", type: "holiday", description: "Friday" }
+];
+
 function CalendarView() {
-  const { calendarEvents, addCalendarEvent, userRole } = useAppContext();
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 11, 1));
+  const { calendarEvents: manualEvents, addCalendarEvent, userRole, leaves } = useAppContext();
+
+  const calendarEvents = useMemo(() => {
+    const generatedEvents = [];
+    if (leaves && Array.isArray(leaves)) {
+      leaves.forEach(leave => {
+        if (leave.status === "Approved") {
+          let current = new Date(leave.startDate);
+          const end = new Date(leave.endDate);
+          while (current <= end) {
+            generatedEvents.push({
+              id: `leave-${leave.id || leave.uid}-${current.toISOString()}`,
+              title: `${leave.employeeName} - ${leave.type}`,
+              date: current.toISOString().split('T')[0],
+              type: "leave",
+              description: leave.reason
+            });
+            current.setDate(current.getDate() + 1);
+          }
+        }
+      });
+    }
+    return [...HOLIDAYS_2026, ...(manualEvents || []), ...generatedEvents];
+  }, [manualEvents, leaves]);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", date: "", type: "event", description: "" });
@@ -105,23 +149,38 @@ function CalendarView() {
             /* Calendar Days */
           }
           <div className="grid grid-cols-7 flex-1 overflow-y-auto custom-scrollbar">
-            {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/30 bg-slate-50/20 dark:bg-slate-950/10" />)}
+            {Array.from({ length: firstDay }).map((_, i) => {
+              const isWeekend = i === 0 || i === 6;
+              return <div key={`empty-${i}`} className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/30 ${isWeekend ? "bg-red-100/80 dark:bg-rose-900/40" : "bg-slate-50/20 dark:bg-slate-950/10"}`} />;
+            })}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const dateKey = formatDateKey(day);
               const dayEvents = eventsForDate(day);
               const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
               const isSelected = selectedDate === dateKey;
+              const currentDayOfWeek = new Date(year, month, day).getDay();
+              const isWeekend = currentDayOfWeek === 0 || currentDayOfWeek === 6;
+              let baseClasses = isSelected ? "bg-cyan-50/30 dark:bg-cyan-900/10" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30";
+              if (!isSelected && isWeekend) {
+                baseClasses = "bg-red-100/80 dark:bg-rose-900/40 hover:bg-red-200/80 dark:hover:bg-rose-800/50";
+              }
               return <motion.div
                 key={day}
                 onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/60 p-2 cursor-pointer transition-all relative group ${isSelected ? "bg-cyan-50/30 dark:bg-cyan-900/10" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"}`}
+                className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/60 p-2 cursor-pointer transition-all relative group ${baseClasses}`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black transition-all ${isToday ? "bg-cyan-600 text-white shadow-md" : isSelected ? "text-cyan-600 font-black" : "text-slate-500 dark:text-slate-400 font-bold group-hover:text-slate-900 dark:group-hover:text-white"}`}>
                     {day}
                   </span>
-                  {dayEvents.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]" />}
+                  {dayEvents.length > 0 && (
+                    <div className="flex gap-0.5">
+                      {[...new Set(dayEvents.map(e => e.type))].slice(0, 3).map((type, idx) => (
+                        <span key={idx} className={`w-1.5 h-1.5 rounded-full ${eventTypeStyles[type]?.dot || "bg-cyan-500"} shadow-sm`} />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -139,7 +198,11 @@ function CalendarView() {
             {
               /* Fill remaining empty cells */
             }
-            {Array.from({ length: (7 - (firstDay + daysInMonth) % 7) % 7 }).map((_, i) => <div key={`empty-end-${i}`} className="min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/30 bg-slate-50/20 dark:bg-slate-950/10" />)}
+            {Array.from({ length: (7 - (firstDay + daysInMonth) % 7) % 7 }).map((_, i) => {
+              const cellIndex = (firstDay + daysInMonth + i) % 7;
+              const isWeekend = cellIndex === 0 || cellIndex === 6;
+              return <div key={`empty-end-${i}`} className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/30 ${isWeekend ? "bg-red-100/80 dark:bg-rose-900/40" : "bg-slate-50/20 dark:bg-slate-950/10"}`} />;
+            })}
           </div>
         </div>
       </div>
