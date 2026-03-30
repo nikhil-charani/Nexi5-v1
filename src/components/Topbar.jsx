@@ -31,6 +31,10 @@ function Topbar({ onMenuToggle }) {
     checkOut,
     logout,
     employees,
+    isDark,
+    toggleDark,
+    currentTheme,
+    changeTheme
   } = useAppContext();
   const navigate = useNavigate();
   const [elapsed, setElapsed] = useState("00:00:00");
@@ -107,12 +111,14 @@ function Topbar({ onMenuToggle }) {
       /* Center: Search bar */
     }
     <div
-      className={`relative hidden md:block flex-1 transition-all duration-300 ${isSearchFocused ? "max-w-xl" : "max-w-md"
-        }`}
+      className={`relative hidden md:block flex-1 transition-all duration-300 ${
+        isSearchFocused ? "max-w-xl" : "max-w-md"
+      }`}
     >
       <div
-        className={`flex items-center relative rounded-[24px] transition-all duration-300 ${isSearchFocused ? "min-h-[64px]" : "min-h-[52px]"
-          }`}
+        className={`flex items-center relative rounded-[24px] transition-all duration-300 ${
+          isSearchFocused ? "min-h-[64px]" : "min-h-[52px]"
+        }`}
       >
         <Search
           className="absolute text-slate-400 left-4 z-10 pointer-events-none"
@@ -131,8 +137,9 @@ function Topbar({ onMenuToggle }) {
               setSearchSuggestions([]);
             }, 200)
           }
-          className={`w-full bg-gray-50/50 border border-gray-200/50 focus:border-primary/20 focus:bg-white rounded-[24px] pl-16 pr-12 text-[13px] font-black tracking-tight transition-all duration-300 outline-none placeholder:text-gray-400 text-textPrimary focus:ring-[12px] focus:ring-primary/5 uppercase soft-shadow focus:shadow-nexi5 ${isSearchFocused ? "py-5" : "py-4"
-            }`}
+          className={`w-full bg-gray-50/50 border border-gray-200/50 focus:border-primary/20 focus:bg-white rounded-[24px] pl-16 pr-12 text-[13px] font-black tracking-tight transition-all duration-300 outline-none placeholder:text-gray-400 text-textPrimary focus:ring-[12px] focus:ring-primary/5 uppercase soft-shadow focus:shadow-nexi5 ${
+            isSearchFocused ? "py-5" : "py-4"
+          }`}
         />
       </div>
 
@@ -168,53 +175,51 @@ function Topbar({ onMenuToggle }) {
     }
     <div className="flex items-center gap-4 ml-auto">
       {/* Attendance Toggle */}
-      {currentUser?.role?.toLowerCase() !== "admin" && (
-        <div className="flex items-center gap-4 pr-6 border-r border-gray-100/50">
-          <div className="hidden sm:flex flex-col items-end">
-            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isCheckedIn ? "text-primary" : "text-slate-400"} transition-colors`}>
-              {isCheckedIn ? "Checked In" : "Checked Out"}
-            </span>
-            {isCheckedIn && (
-              <motion.span
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs font-mono font-black text-primary mt-0.5"
-              >
-                {elapsed}
-              </motion.span>
-            )}
-          </div>
-          <button
-            onClick={handleCheckInToggle}
-            className={`relative w-14 h-7 rounded-full transition-all duration-500 flex items-center px-1 group/toggle shadow-inner ${isCheckedIn ? "bg-primary" : "bg-gray-200"}`}
-            title={isCheckedIn ? "Click to Check Out" : "Click to Check In"}
-          >
-            <motion.div
-              animate={{ x: isCheckedIn ? 28 : 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="w-5 h-5 rounded-full bg-white shadow-md flex items-center justify-center relative z-10"
+      <div className="flex items-center gap-4 pr-6 border-r border-gray-100/50">
+        <div className="hidden sm:flex flex-col items-end">
+          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isCheckedIn ? "text-primary" : "text-slate-400"} transition-colors`}>
+            {isCheckedIn ? "Checked In" : "Checked Out"}
+          </span>
+          {isCheckedIn && (
+            <motion.span 
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xs font-mono font-black text-primary mt-0.5"
             >
-              <div className={`w-1.5 h-1.5 rounded-full ${isCheckedIn ? "bg-primary" : "bg-gray-300"} transition-colors duration-300`} />
-            </motion.div>
-
-            {/* Subtle Glow when checked in */}
-            {isCheckedIn && (
-              <motion.div
-                layoutId="toggleGlow"
-                className="absolute inset-0 rounded-full bg-primary/20 blur-md"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              />
-            )}
-          </button>
+              {elapsed}
+            </motion.span>
+          )}
         </div>
-      )}
+        <button
+          onClick={handleCheckInToggle}
+          className={`relative w-14 h-7 rounded-full transition-all duration-500 flex items-center px-1 group/toggle shadow-inner ${isCheckedIn ? "bg-primary" : "bg-gray-200"}`}
+          title={isCheckedIn ? "Click to Check Out" : "Click to Check In"}
+        >
+          <motion.div
+            animate={{ x: isCheckedIn ? 28 : 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="w-5 h-5 rounded-full bg-white shadow-md flex items-center justify-center relative z-10"
+          >
+             <div className={`w-1.5 h-1.5 rounded-full ${isCheckedIn ? "bg-primary" : "bg-gray-300"} transition-colors duration-300`} />
+          </motion.div>
+          
+          {/* Subtle Glow when checked in */}
+          {isCheckedIn && (
+            <motion.div 
+              layoutId="toggleGlow"
+              className="absolute inset-0 rounded-full bg-primary/20 blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            />
+          )}
+        </button>
+      </div>
 
       {/* Notification Bell */}
       <div className="relative">
         <button
           onClick={() => setIsNotifOpen(!isNotifOpen)}
-          className={`relative p-4 rounded-[20px] transition-all duration-500 active:scale-90 border border-transparent ${isNotifOpen ? "bg-primary/5 text-primary border-primary/10 glow-shadow" : "text-gray-400 hover:bg-gray-50 hover:text-primary hover:border-gray-100"}`}
+            className={`relative p-4 rounded-[20px] transition-all duration-500 active:scale-90 border border-transparent ${isNotifOpen ? "bg-primary/5 text-primary border-primary/10 glow-shadow" : "text-gray-400 hover:bg-gray-50 hover:text-primary hover:border-gray-100"}`}
         >
           <Bell size={20} />
           {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />}

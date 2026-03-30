@@ -3,7 +3,7 @@ const { db } = require('../config/firebase');
 exports.addEvent = async (req, res) => {
     try {
         const { title, date, type, description, createdBy, creatorRole } = req.body;
-
+        
         if (!title || !date) {
             return res.status(400).json({ success: false, message: "Title and date are required" });
         }
@@ -52,13 +52,13 @@ exports.updateEvent = async (req, res) => {
     try {
         const { id } = req.params;
         const { title, date, type, description } = req.body;
-
+        
         const docRef = db.collection("calendarEvents").doc(id);
         const docSnap = await docRef.get();
         if (!docSnap.exists) {
             return res.status(404).json({ success: false, message: "Event not found" });
         }
-
+        
         const eventData = docSnap.data();
         let userRole = req.user?.role || "";
         // Dev fallback: Trust the header if the token has no role claim
@@ -71,12 +71,12 @@ exports.updateEvent = async (req, res) => {
         const isAdmin = userRoleStr.includes("admin") || userRoleStr.includes("hr");
         if (!isAdmin) {
             if (userRoleStr === "manager") {
-                console.log("Update denied: Manager role");
-                return res.status(403).json({ success: false, message: "Managers cannot edit events" });
+                 console.log("Update denied: Manager role");
+                 return res.status(403).json({ success: false, message: "Managers cannot edit events" });
             }
             if (eventData.type !== "leave" || String(eventData.createdBy) !== String(userId)) {
-                console.log("Update denied: Not owner of leave event");
-                return res.status(403).json({ success: false, message: "Unauthorized to edit this event" });
+                 console.log("Update denied: Not owner of leave event");
+                 return res.status(403).json({ success: false, message: "Unauthorized to edit this event" });
             }
         }
 
@@ -117,11 +117,11 @@ exports.deleteEvent = async (req, res) => {
         const eventData = docSnap.data();
         console.log(`Full req.user object:`, JSON.stringify(req.user));
         console.log(`X-User-Role header:`, req.headers['x-user-role']);
-
+        
         // Always trust X-User-Role header when present (overrides token claim)
         let userRole = req.headers['x-user-role'] || req.user?.role || "";
         const userId = req.user?.id || req.user?.uid;
-
+        
         console.log(`Final role used: [${userRole}]`);
 
         const userRoleStr = (userRole || "").toString().toLowerCase();
@@ -132,8 +132,8 @@ exports.deleteEvent = async (req, res) => {
                 return res.status(403).json({ success: false, message: "Managers cannot delete events" });
             }
             if (eventData.type !== "leave" || String(eventData.createdBy) !== String(userId)) {
-                console.log("Delete denied: Not owner of leave event");
-                return res.status(403).json({ success: false, message: "Unauthorized to delete this event" });
+                 console.log("Delete denied: Not owner of leave event");
+                 return res.status(403).json({ success: false, message: "Unauthorized to delete this event" });
             }
         }
 
