@@ -83,12 +83,10 @@ const resolveEmployeeByEmployeeIdOrUsername = async (inputRaw) => {
     const input = String(inputRaw ?? "").trim();
     if (!input) return { email: null, employeeDocData: null };
 
-    // Accept EMP- vs Emp- vs emp-
-    const normalizedInputs = [input];
-    if (input.toLowerCase().startsWith("emp-")) {
-        normalizedInputs.push(`EMP-${input.slice(4)}`);
-    }
-
+    // Accept any prefix by adding the input as-is.
+    // The previous logic was hardcoded to "EMP-", now we just use the input.
+    const normalizedInputs = [input, input.toUpperCase(), input.toLowerCase()];
+    
     const inputsLower = normalizedInputs.map((v) => v.toLowerCase());
 
     // 1) Try indexed Firestore queries first
