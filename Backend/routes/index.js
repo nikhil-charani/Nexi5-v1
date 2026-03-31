@@ -39,6 +39,11 @@ router.post('/calendar/add-event', verifyToken, addEvent)
 router.get('/calendar/events', verifyToken, getEvents)
 router.put('/calendar/update-event/:id', verifyToken, updateEvent)
 router.delete('/calendar/delete-event/:id', verifyToken, deleteEvent)
+
+// Advanced Attendance Analytics
+const advancedAttendanceRoutes = require('./advancedAttendanceRoutes')
+router.use('/attendance/advanced', advancedAttendanceRoutes)
+
 router.get('/me', verifyToken, (req, res) => {
     res.json({ success: true, user: req.user });
 })

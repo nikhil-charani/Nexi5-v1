@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import Directory from "./pages/Directory";
 import OrgChart from "./pages/OrgChart";
+import AttendanceDashboard from "./pages/AttendanceDashboard";
 import Tasks from "./pages/Tasks";
 import Announcements from "./pages/Announcements";
 import CalendarView from "./pages/CalendarView";
@@ -62,6 +63,7 @@ const AppRoutes = () => {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="candidates" element={<Candidates />} />
           <Route path="attendance" element={<Attendance />} />
+          <Route path="attendance-analytics" element={<AttendanceDashboard />} />
           <Route path="leave" element={<Leave />} />
           <Route path="payroll" element={<Payroll />} />
           <Route path="performance" element={<Performance />} />
