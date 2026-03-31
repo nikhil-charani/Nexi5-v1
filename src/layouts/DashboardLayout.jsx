@@ -59,7 +59,7 @@ const navGroups = [
     name: "Work & Operations",
     color: "#0f4184",
     items: [
-      { name: "Projects", path: "/dashboard/projects", icon: FolderKanban, roles: ["Admin", "Manager", "Employee"] },
+      { name: "Projects & Modules", path: "/dashboard/projects", icon: FolderKanban, roles: ["Admin", "Manager", "Employee", "HR Head", "HR Accountant", "HR Recruiter"] },
       { name: "Tasks", path: "/dashboard/tasks", icon: ClipboardList, roles: ["Admin", "Manager", "Employee", "HR Recruiter", "HR Accountant"] },
       { name: "Documents", path: "/dashboard/documents", icon: FileText, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
       { name: "Attendance", path: "/dashboard/attendance", icon: UserCheck, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },

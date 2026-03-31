@@ -12,6 +12,13 @@ import { exportToCSV } from '../lib/csvExport';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
+const formatHHMM = (decimalHours) => {
+  if (!decimalHours) return '00:00';
+  const hrs = Math.floor(decimalHours);
+  const mins = Math.round((decimalHours - hrs) * 60);
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
 const AttendanceDashboard = () => {
   const { currentUser } = useAppContext();
   const [activeTab, setActiveTab] = useState('Employees'); // Default to Daily Employees
@@ -87,7 +94,7 @@ const AttendanceDashboard = () => {
       Projects: emp.projects.join(', '),
       CheckIn: emp.checkIn || 'Absent',
       CheckOut: emp.checkOut || '--:--',
-      Hours: emp.workingHours,
+      Hours: formatHHMM(emp.workingHours),
       Status: emp.status
     }));
     exportToCSV(formatted, `Daily_Attendance_${selectedDate}.csv`);
@@ -101,7 +108,7 @@ const AttendanceDashboard = () => {
       Present_Days: emp.presentDays,
       Late_Days: emp.lateDays,
       Attendance_Percentage: `${emp.attendancePercentage}%`,
-      Avg_Hours: emp.avgWorkingHours,
+      Avg_Hours: formatHHMM(emp.avgWorkingHours),
       Productivity_Score: emp.productivityScore,
       Insights: emp.insights.join(' | ')
     }));

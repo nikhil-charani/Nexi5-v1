@@ -4,30 +4,50 @@ import { useAppContext } from "../hooks/useAppContext";
 import { motion } from "framer-motion";
 import { DropdownMenu, DropdownMenuItem } from "../components/ui/dropdown";
 import { toast } from "sonner";
-const historyData = [
-    { date: "Mon, Nov 4", checkIn: "09:05 AM", checkOut: "06:18 PM", hours: "9h 13m", status: "Present" },
-    { date: "Tue, Nov 5", checkIn: "09:42 AM", checkOut: "06:00 PM", hours: "8h 18m", status: "Present" },
-    { date: "Wed, Nov 6", checkIn: "\u2014", checkOut: "\u2014", hours: "0h", status: "On Leave" },
-    { date: "Thu, Nov 7", checkIn: "09:00 AM", checkOut: "07:05 PM", hours: "10h 5m", status: "Present" },
-    { date: "Fri, Nov 8", checkIn: "10:30 AM", checkOut: "02:00 PM", hours: "3h 30m", status: "Half Day" },
-    { date: "Mon, Nov 11", checkIn: "08:55 AM", checkOut: "06:05 PM", hours: "9h 10m", status: "Present" }
-];
+const formatTime = (timeString) => {
+    if (!timeString) return "—";
+    return new Date(timeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    // Adjusting for timezone to ensure we get the right weekday
+    const date = new Date(dateString);
+    const tzDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return tzDate.toLocaleDateString(['en-US'], { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const formatStatus = (status) => {
+    if (!status) return "—";
+    if (status === "half-day") return "Half Day";
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
 const STATUS_CLASS = {
     Present: "bg-[#0f4184]/10 text-[#0b3166]",
     "On Leave": "bg-orange-100 text-orange-600",
     "Half Day": "bg-blue-100 text-blue-600",
+    Late: "bg-yellow-100 text-yellow-600",
     Absent: "bg-red-100 text-red-600"
 };
 const STATUS_DOT = {
     Present: "bg-[#0f4184]",
     "On Leave": "bg-orange-500",
     "Half Day": "bg-blue-500",
+    Late: "bg-yellow-500",
     Absent: "bg-red-500"
 };
 function Attendance() {
-    const { isCheckedIn, checkIn, checkOut, userRole } = useAppContext();
+    const { attendance, isCheckedIn, checkIn, checkOut, userRole } = useAppContext();
     const [exporting, setExporting] = useState(false);
     const isAdminOrHR = ["Admin", "HR", "HR Head", "HR Accountant", "HR Recruiter"].includes(userRole);
+
+    const historyData = (attendance || []).map(item => ({
+        date: formatDate(item.date),
+        checkIn: formatTime(item.checkin),
+        checkOut: formatTime(item.checkout),
+        hours: item.totalHours ? `${Math.floor(item.totalHours)}h ${Math.round((item.totalHours % 1) * 60)}m` : (item.checkout ? "0h" : "—"),
+        status: formatStatus(item.status)
+    }));
     const handleCheckInToggle = () => {
         if (isCheckedIn) {
             checkOut();

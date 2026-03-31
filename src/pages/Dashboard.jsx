@@ -36,7 +36,7 @@ import {
   BarChart,
   Bar
 } from "recharts";
-import { payrollTrendData, aiInsights, attendanceTrendData, mockActivityFeed } from "../data/mockData";
+import { payrollTrendData, aiInsights, mockActivityFeed } from "../data/mockData";
 import { useAppContext } from "../hooks/useAppContext";
 import { useNavigate } from "react-router-dom";
 const TypewriterText = ({ text, delay = 0 }) => {
@@ -121,15 +121,14 @@ const StatCard = ({ title, value, icon: Icon, trend, color, delay, onClick }) =>
     </div>
   </div>
 </motion.div>;
-const attendanceHistory = [
-  { date: "2024-11-04", checkIn: "09:12 AM", checkOut: "06:30 PM", hours: 9.3, status: "Present" },
-  { date: "2024-11-05", checkIn: "09:45 AM", checkOut: "06:00 PM", hours: 8.25, status: "Present" },
-  { date: "2024-11-06", checkIn: "\u2014", checkOut: "\u2014", hours: 0, status: "On Leave" },
-  { date: "2024-11-07", checkIn: "09:01 AM", checkOut: "07:10 PM", hours: 10.15, status: "Present" },
-  { date: "2024-11-08", checkIn: "10:30 AM", checkOut: "02:00 PM", hours: 3.5, status: "Half Day" }
-];
 function Dashboard() {
-  const { userRole, currentUser, employees, projects, leaves, grievances } = useAppContext();
+  const { userRole, currentUser, employees, projects, leaves, grievances, attendance, attendanceTrendData } = useAppContext();
+  
+  const recentAttendance = (attendance || []).slice(0, 5).map(item => ({
+    date: new Date(item.date).toLocaleDateString(['en-US'], { weekday: 'short', month: 'short', day: 'numeric' }),
+    status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : "—",
+    hours: item.totalHours || 0
+  }));
   const navigate = useNavigate();
   const isAdminOrHR = ["Admin", "HR", "HR Head", "HR Accountant", "HR Recruiter"].includes(userRole);
   const totalEmployees = (employees || []).length;
@@ -485,7 +484,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {attendanceHistory.map((row, i) => (
+                  {recentAttendance.map((row, i) => (
                     <tr key={i} className="hover:bg-[#F0F9FF] transition-colors group">
                       <td className="px-6 py-4 font-medium text-textPrimary">{row.date}</td>
                       <td className="px-6 py-4">

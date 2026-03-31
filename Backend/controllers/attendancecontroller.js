@@ -6,7 +6,7 @@ const {db}= require("../config/firebase")
 const checkin = async (req, res, next) => {
   try {
     const uid = req.user?.uid;
-    const { location, notes } = req.body;
+    const { location, notes } = req.body || {};
     const now = new Date();
     const today = now.toISOString().split("T")[0];
     const docId = `${uid}_${today}`;
@@ -21,6 +21,20 @@ const checkin = async (req, res, next) => {
       });
     }
 
+    // Fetch employee details for dual-write
+    let name = "Unknown";
+    let department = "Unknown";
+    try {
+      const empDoc = await db.collection("employees").doc(uid).get();
+      if (empDoc.exists) {
+        const empData = empDoc.data()?.employeeData || empDoc.data();
+        name = empData.firstName ? `${empData.firstName} ${empData.lastName}`.trim() : empData.name || "Unknown";
+        department = empData.department || "Unknown";
+      }
+    } catch (e) {
+      console.warn("Failed to fetch employee details for checkin:", e);
+    }
+
     // 2. Late Logic (after 09:30 AM)
     const hour = now.getHours();
     const minute = now.getMinutes();
@@ -29,7 +43,11 @@ const checkin = async (req, res, next) => {
 
     const attendanceData = {
       employeeId: uid,
+      name: name,
+      role: req.user?.role || "Employee",
+      department: department,
       date: today,
+      month: today.slice(0, 7),
       checkin: now.toISOString(),
       checkout: null,
       totalHours: 0,
@@ -42,6 +60,13 @@ const checkin = async (req, res, next) => {
     };
 
     await db.collection("attendance").doc(docId).set(attendanceData);
+
+    // Dual-write strategy
+    try {
+      await db.collection("daily_attendance").doc(docId).set(attendanceData);
+    } catch (e) {
+      console.error("Failed to write to daily_attendance collection:", e);
+    }
 
     // 3. Real-time Bridge
     const io = req.app.get("io");
@@ -101,6 +126,13 @@ const checkout = async (req, res, next) => {
     };
 
     await attendanceRef.update(updateData);
+
+    // Dual-write strategy
+    try {
+      await db.collection("daily_attendance").doc(docId).update(updateData);
+    } catch (e) {
+      console.error("Failed to update daily_attendance collection:", e);
+    }
 
     // Real-time Bridge
     const io = req.app.get("io");
@@ -279,7 +311,24 @@ const getAttendanceHistory = async (req, res, next) => {
 };
 
 
-module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory };
+const getAllAttendance = async (req, res, next) => {
+  try {
+    const snapshot = await db.collection("attendance").get();
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error("getAllAttendance Error:", error);
+    res.status(500).json({ success: false, message: "Error fetching attendance" });
+  }
+};
+
+module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAllAttendance };
 
 
 

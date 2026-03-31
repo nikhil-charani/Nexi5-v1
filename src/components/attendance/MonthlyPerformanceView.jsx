@@ -1,7 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Download, ChevronDown, ChevronRight, Projector, Briefcase, Filter, Calendar, Star, AlertTriangle, User, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getInitials } from '../../lib/stringUtils';
+const getInitials = (name) => {
+  if (!name) return '';
+  return name.split(' ').map(n => n?.[0]).join('').substring(0, 2).toUpperCase();
+};
+
+const formatHHMM = (decimalHours) => {
+  if (!decimalHours) return '00:00';
+  const hrs = Math.floor(decimalHours);
+  const mins = Math.round((decimalHours - hrs) * 60);
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
 
 const InsightBadge = ({ flag }) => {
   const configs = {
@@ -121,7 +131,7 @@ const MonthlyPerformanceView = ({ data, projectSummary, onExport, selectedMonth,
                    </div>
                    <div className="px-6 text-center">
                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Hours</p>
-                     <p className="text-xl font-black text-[#0f4184]">{summary.avgHours}h</p>
+                     <p className="text-xl font-black text-[#0f4184]">{formatHHMM(summary.avgHours)}</p>
                    </div>
                 </div>
 
@@ -179,7 +189,7 @@ const MonthlyPerformanceView = ({ data, projectSummary, onExport, selectedMonth,
                                   </div>
                                </td>
                                <td className="px-8 py-4">
-                                  <span className="text-xs font-bold text-slate-600">{member.avgWorkingHours}h / day</span>
+                                  <span className="text-xs font-bold text-slate-600">{formatHHMM(member.avgWorkingHours)} / day</span>
                                </td>
                                <td className="px-8 py-4">
                                   <div className="flex items-center gap-2">
