@@ -111,64 +111,64 @@ function Topbar({ onMenuToggle }) {
       /* Center: Search bar */
     }
     <div
-  className={`relative hidden md:block flex-1 transition-all duration-300 ${
-    isSearchFocused ? "max-w-xl" : "max-w-md"
-  }`}
->
-  <div
-    className={`flex items-center relative rounded-[24px] transition-all duration-300 ${
-      isSearchFocused ? "min-h-[64px]" : "min-h-[52px]"
-    }`}
-  >
-    <Search
-      className="absolute text-slate-400 left-4 z-10 pointer-events-none"
-      size={16}
-    />
-
-    <input
-      type="text"
-      value={searchQuery}
-      placeholder="Search for employees, tasks, or documents..."
-      onChange={(e) => handleSearchChange(e.target.value)}
-      onFocus={() => setIsSearchFocused(true)}
-      onBlur={() =>
-        setTimeout(() => {
-          setIsSearchFocused(false);
-          setSearchSuggestions([]);
-        }, 200)
-      }
-      className={`w-full bg-gray-50/50 border border-gray-200/50 focus:border-primary/20 focus:bg-white rounded-[24px] pl-16 pr-12 text-[13px] font-black tracking-tight transition-all duration-300 outline-none placeholder:text-gray-400 text-textPrimary focus:ring-[12px] focus:ring-primary/5 uppercase soft-shadow focus:shadow-nexi5 ${
-        isSearchFocused ? "py-5" : "py-4"
+      className={`relative hidden md:block flex-1 transition-all duration-300 ${
+        isSearchFocused ? "max-w-xl" : "max-w-md"
       }`}
-    />
-  </div>
-
-  <AnimatePresence>
-    {searchSuggestions.length > 0 && (
-      <motion.div
-        initial={{ opacity: 0, y: -5 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -5 }}
-        className="absolute top-full mt-2 left-0 right-0 bg-white rounded-xl border border-gray-100 shadow-nexi5 overflow-hidden z-50"
+    >
+      <div
+        className={`flex items-center relative rounded-[24px] transition-all duration-300 ${
+          isSearchFocused ? "min-h-[64px]" : "min-h-[52px]"
+        }`}
       >
-        {searchSuggestions.map((s) => (
-          <button
-            key={s}
-            onMouseDown={() => {
-              navigate("/dashboard/directory");
+        <Search
+          className="absolute text-slate-400 left-4 z-10 pointer-events-none"
+          size={16}
+        />
+
+        <input
+          type="text"
+          value={searchQuery}
+          placeholder="Search for employees, tasks, or documents..."
+          onChange={(e) => handleSearchChange(e.target.value)}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() =>
+            setTimeout(() => {
+              setIsSearchFocused(false);
               setSearchSuggestions([]);
-              setSearchQuery("");
-            }}
-            className="w-full text-left px-4 py-3 text-sm text-textSecondary hover:bg-[#F0F9FF] hover:text-primary transition-colors flex items-center gap-3"
+            }, 200)
+          }
+          className={`w-full bg-gray-50/50 border border-gray-200/50 focus:border-primary/20 focus:bg-white rounded-[24px] pl-16 pr-12 text-[13px] font-black tracking-tight transition-all duration-300 outline-none placeholder:text-gray-400 text-textPrimary focus:ring-[12px] focus:ring-primary/5 uppercase soft-shadow focus:shadow-nexi5 ${
+            isSearchFocused ? "py-5" : "py-4"
+          }`}
+        />
+      </div>
+
+      <AnimatePresence>
+        {searchSuggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="absolute top-full mt-2 left-0 right-0 bg-white rounded-xl border border-gray-100 shadow-nexi5 overflow-hidden z-50"
           >
-            <Search size={14} className="text-slate-400 shrink-0" />
-            <span className="truncate">{s}</span>
-          </button>
-        ))}
-      </motion.div>
-    )}
-  </AnimatePresence>
-</div>
+            {searchSuggestions.map((s) => (
+              <button
+                key={s}
+                onMouseDown={() => {
+                  navigate("/dashboard/directory");
+                  setSearchSuggestions([]);
+                  setSearchQuery("");
+                }}
+                className="w-full text-left px-4 py-3 text-sm text-textSecondary hover:bg-[#F0F9FF] hover:text-primary transition-colors flex items-center gap-3"
+              >
+                <Search size={14} className="text-slate-400 shrink-0" />
+                <span className="truncate">{s}</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
 
     {
       /* Right Actions */

@@ -2,7 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-require("dotenv").config();
+const path = require("path");
+// Load backend environment from Backend/.env
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const routes = require("./routes/index");
 const { errorhandler,asynchandler} = require("./middleware/errorhandler");
@@ -12,7 +14,7 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } })); // allow cross-origin API requests
 // dynamically allow the request origin
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: true, credentials: true, allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Role'] }));
 app.use(express.json()); // parse the body
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
@@ -40,6 +42,8 @@ const io = require("socket.io")(server, {
     credentials: true
   }
 });
+
+app.set("io", io);
 
 io.on("connection",(socket)=>{
    console.log("User connected")

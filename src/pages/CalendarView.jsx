@@ -1,22 +1,46 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalendarIcon, Clock, Bell } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalendarIcon, Clock, Bell, Edit2, Trash2 } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const eventTypeStyles = {
-  holiday: { badge: "badge-danger", dot: "bg-rose-500", bg: "bg-cyan-600", iconColor: "text-rose-500" },
-  event: { badge: "badge-info", dot: "bg-cyan-500", bg: "bg-cyan-600", iconColor: "text-cyan-500" },
-  meeting: { badge: "badge-secondary", dot: "bg-purple-500", bg: "bg-cyan-600", iconColor: "text-purple-500" },
-  weekend: { badge: "bg-slate-100/50 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400 border-none", dot: "bg-slate-400", bg: "bg-slate-600", iconColor: "text-slate-400" }
+  leave: { badge: "badge-warning", dot: "bg-amber-500", bg: "bg-amber-500", iconColor: "text-amber-500" },
+  holiday: { badge: "badge-danger", dot: "bg-rose-500", bg: "bg-rose-500", iconColor: "text-rose-500" },
+  event: { badge: "badge-info", dot: "bg-cyan-500", bg: "bg-cyan-500", iconColor: "text-cyan-500" },
+  meeting: { badge: "badge-secondary", dot: "bg-purple-500", bg: "bg-purple-500", iconColor: "text-purple-500" }
 };
 function CalendarView() {
-  const { calendarEvents, addCalendarEvent, userRole } = useAppContext();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const { calendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent, userRole, currentUser } = useAppContext();
+  const [currentDate, setCurrentDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", date: "", type: "event", description: "" });
-  const canAddEvent = userRole === "HR Head";
+  const [isDeleting, setIsDeleting] = useState(null); // to hold ID of event being deleted for confirmation
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const isEmployee = userRole === "Employee";
+  const canAddEvent = ["Admin", "HR Head", "HR Recruiter", "Employee"].includes(userRole || "");
+  
+  const currentUserId = currentUser?.id || currentUser?.uid;
+  // Leave events are PRIVATE — only visible to their creator
+  // We match against all possible identifiers (uid, name, email) since old events may store different values
+  const myIdentifiers = new Set([
+    currentUserId,
+    currentUser?.name,
+    currentUser?.email,
+  ].filter(Boolean).map(String));
+
+  const visibleEvents = calendarEvents.filter(ev => {
+    if (ev.type !== "leave") return true; // non-leave events stay public
+    const isMyLeave = myIdentifiers.has(String(ev.createdBy || ""));
+    if (!isMyLeave) return false; // never show someone else's leave
+    // Strict role-perspective match: leave is only visible in the same role it was created in
+    if (!ev.creatorRole) return false; // old events without creatorRole are hidden
+    return ev.creatorRole === userRole;
+  });
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
@@ -62,15 +86,54 @@ function CalendarView() {
 
   const eventsForDate = (d) => {
     const key = formatDateKey(d);
-    return allEvents.filter((e) => e.date === key);
+    return visibleEvents.filter((e) => e.date === key);
   };
-  const selectedEvents = selectedDate ? allEvents.filter((e) => e.date === selectedDate) : [];
-  const handleAddEvent = () => {
+  const selectedEvents = selectedDate ? visibleEvents.filter((e) => e.date === selectedDate) : [];
+  
+  const openModal = (ev = null) => {
+    if (ev) {
+      setNewEvent(ev);
+    } else {
+      setNewEvent({ title: "", date: selectedDate || "", type: isEmployee ? "leave" : "event", description: "" });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSaveEvent = async () => {
     if (!newEvent.title || !newEvent.date) return;
-    addCalendarEvent(newEvent);
-    setIsModalOpen(false);
-    setNewEvent({ title: "", date: "", type: "event", description: "" });
+    setIsSubmitting(true);
+    try {
+      let res;
+      if (newEvent.id) {
+        res = await updateCalendarEvent(newEvent.id, newEvent);
+      } else {
+        res = await addCalendarEvent(newEvent);
+      }
+      
+      if (!res?.success) {
+        alert("Save failed: " + (res?.error || "Unknown error"));
+        return;
+      }
+      
+      setIsModalOpen(false);
+      setNewEvent({ title: "", date: "", type: "event", description: "" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this event?")) {
+      const res = await deleteCalendarEvent(id);
+      if (res.success) {
+        // Optional: Manual filter fallback if socket is slow
+        // setCalendarEvents(prev => prev.filter(e => e.id !== id));
+      } else {
+        alert("Delete failed: " + (res.error || "Unknown error"));
+      }
+    }
+  };
+
   return <div className="space-y-5 h-full flex flex-col">
     {
       /* Header */
@@ -86,7 +149,7 @@ function CalendarView() {
       {canAddEvent && <motion.button
         whileHover={{ scale: 1.02, y: -1 }}
         whileTap={{ scale: 0.97 }}
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => openModal()}
         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-black shadow-lg gradient-bg-primary hover:shadow-cyan-500/25 transition-all"
       >
         <Plus size={16} /> Add Event
@@ -150,25 +213,20 @@ function CalendarView() {
               const dayEvents = eventsForDate(day);
               const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
               const isSelected = selectedDate === dateKey;
+              const cellBgClass = dayEvents.length > 0 
+                ? (eventTypeStyles[dayEvents[0].type]?.badge || eventTypeStyles.event.badge)
+                : (isWeekend ? eventTypeStyles.holiday.badge : (isSelected ? "bg-cyan-50/30 dark:bg-cyan-900/10" : "bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-800/30"));
               
-              const baseBg = isWeekend ? "bg-slate-50/40 dark:bg-slate-900/30" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30";
-              const selectedBg = "bg-cyan-50/30 dark:bg-cyan-900/10";
-
               return <motion.div
                 key={day}
                 onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/60 p-2 cursor-pointer transition-all relative group ${isSelected ? selectedBg : baseBg} ${isWeekend ? "opacity-75 hover:opacity-100" : ""}`}
+                className={`min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/60 p-2 cursor-pointer transition-all relative group ${cellBgClass}`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black transition-all ${isToday ? "bg-cyan-600 text-white shadow-md" : isSelected ? "text-cyan-600 font-black" : "text-slate-500 dark:text-slate-400 font-bold group-hover:text-slate-900 dark:group-hover:text-white"}`}>
                     {day}
                   </span>
-                  <div className="flex gap-1 flex-wrap justify-end max-w-[50%]">
-                    {dayEvents.map((ev, idx) => {
-                      const style = eventTypeStyles[ev.type] || eventTypeStyles.event;
-                      return <span key={`dot-${idx}`} className={`w-1.5 h-1.5 rounded-full ${style.dot} shadow-sm`} title={ev.title} />;
-                    })}
-                  </div>
+                  {dayEvents.length > 0 && <span className={`w-1.5 h-1.5 rounded-full ${eventTypeStyles[dayEvents[0].type]?.dot || eventTypeStyles.event.dot} shadow-sm`} />}
                 </div>
 
                 <div className="space-y-1">
@@ -220,15 +278,34 @@ function CalendarView() {
           <div className="space-y-3">
             {selectedEvents.length > 0 ? selectedEvents.map((ev) => {
               const style = eventTypeStyles[ev.type] || eventTypeStyles.event;
+              
+              const userRoleStr = (userRole || "").toString().toLowerCase();
+              const isAdmin = userRoleStr.includes("admin") || userRoleStr.includes("hr");
+              const userId = currentUser?.id || currentUser?.uid;
+              const isCreator = String(ev.createdBy) === String(userId);
+              const canEditDelete = isAdmin || (userRoleStr === "employee" && ev.type === "leave" && isCreator);
+
               return <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 key={ev.id}
                 className={`rounded-2xl p-4 border transition-all ${style.badge} bg-opacity-40 border-slate-100 dark:border-slate-800`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-2 h-2 rounded-full ${style.dot}`} />
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{ev.type}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${style.dot}`} />
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{ev.type}</span>
+                  </div>
+                  {canEditDelete && (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => openModal(ev)} className="p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-slate-800 transition-colors text-slate-500 hover:text-cyan-600">
+                        <Edit2 size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(ev.id)} className="p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-slate-800 transition-colors text-slate-500 hover:text-rose-600">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-between items-start">
                   <p className="font-black text-slate-800 dark:text-white text-sm leading-tight">{ev.title}</p>
@@ -252,7 +329,15 @@ function CalendarView() {
             Coming Up
           </h3>
           <div className="space-y-4">
-            {allEvents.filter(e => e.type !== "weekend").slice(0, 4).map((ev) => {
+            {visibleEvents
+              .filter((ev) => {
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                return ev.date >= todayStr;
+              })
+              .sort((a, b) => a.date.localeCompare(b.date))
+              .slice(0, 4)
+              .map((ev) => {
               const style = eventTypeStyles[ev.type] || eventTypeStyles.event;
               return <div key={ev.id} className="flex gap-3 group cursor-pointer">
                 <div className={`w-1 rounded-full ${style.dot} opacity-40 group-hover:opacity-100 transition-opacity`} />
@@ -303,7 +388,7 @@ function CalendarView() {
         >
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
             <div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">Create Event</h2>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white">{newEvent.id ? 'Edit Event' : 'Create Event'}</h2>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Define new timeline activity</p>
             </div>
             <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-xl hover:bg-white dark:hover:bg-slate-800 text-slate-400 transition-all"><X size={20} /></button>
@@ -336,11 +421,17 @@ function CalendarView() {
                   <select
                     value={newEvent.type}
                     onChange={(e) => setNewEvent((p) => ({ ...p, type: e.target.value }))}
-                    className="input-base appearance-none"
+                    className={`input-base appearance-none ${isEmployee ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    disabled={isEmployee}
                   >
-                    <option value="event">Event</option>
-                    <option value="meeting">Meeting</option>
-                    <option value="holiday">Holiday</option>
+                    {!isEmployee && (
+                      <>
+                        <option value="event">Event</option>
+                        <option value="meeting">Meeting</option>
+                        <option value="holiday">Holiday</option>
+                      </>
+                    )}
+                    <option value="leave">Leave</option>
                   </select>
                   <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400 pointer-events-none" />
                 </div>
@@ -363,10 +454,11 @@ function CalendarView() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
-              onClick={handleAddEvent}
-              className="px-8 py-2.5 text-sm font-black text-white rounded-xl shadow-lg gradient-bg-primary hover:shadow-cyan-500/25 transition-all"
+              disabled={isSubmitting}
+              onClick={handleSaveEvent}
+              className={`px-8 py-2.5 text-sm font-black text-white rounded-xl shadow-lg transition-all ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'gradient-bg-primary hover:shadow-cyan-500/25'}`}
             >
-              Add to Calendar
+              {isSubmitting ? 'Saving...' : (newEvent.id ? 'Update Event' : 'Add to Calendar')}
             </motion.button>
           </div>
         </motion.div>
