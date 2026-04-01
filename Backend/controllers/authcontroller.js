@@ -25,6 +25,7 @@ const ROLE_DASHBOARD_MAP = {
 const verifyFirebasePassword = async (email, password) => {
     const apiKey = process.env.FIREBASE_WEB_API_KEY;
     if (!apiKey) {
+        console.error("[AUTH] 🔥 FIREBASE_WEB_API_KEY is missing from environment variables!");
         throw new Error("FIREBASE_WEB_API_KEY is not configured on the backend.");
     }
 
@@ -52,12 +53,16 @@ const verifyFirebasePassword = async (email, password) => {
                         parsed = null;
                     }
 
+                    const errorMessage = parsed?.error?.message || "UNKNOWN";
+                    
+                    // DIAGNOSTIC LOG: This will tell us the EXACT reason for failure
+                    console.log(`[AUTH] Firebase Verify Response: Status=${resp.statusCode}, Error="${errorMessage}", Email="${email}"`);
+
                     // Treat success only when Firebase returned an idToken.
                     if (resp.statusCode >= 200 && resp.statusCode < 300 && parsed?.idToken) {
                         return resolve({ success: true });
                     }
 
-                    const errorMessage = parsed?.error?.message || "UNKNOWN";
                     const invalid =
                         errorMessage === "INVALID_PASSWORD" ||
                         errorMessage === "EMAIL_NOT_FOUND" ||
@@ -72,7 +77,10 @@ const verifyFirebasePassword = async (email, password) => {
             }
         );
 
-        req.on("error", reject);
+        req.on("error", (err) => {
+            console.error("[AUTH] 🚨 Network error verifying Firebase password:", err.message);
+            reject(err);
+        });
         req.write(body);
         req.end();
     });
@@ -85,30 +93,36 @@ const resolveEmployeeByEmployeeIdOrUsername = async (inputRaw) => {
 
     // Accept any prefix by adding the input as-is.
     // The previous logic was hardcoded to "EMP-", now we just use the input.
-    const normalizedInputs = [input, input.toUpperCase(), input.toLowerCase()];
+    // Smart matching: include input with and without common prefix patterns
+    const normalizedInputs = [
+        input, 
+        input.toUpperCase(), 
+        input.toLowerCase(),
+        input.includes("-") ? input.replace("-", "") : null, // If input is "NEX-12345", also check "NEX12345"
+    ].filter(Boolean);
     
     const inputsLower = normalizedInputs.map((v) => v.toLowerCase());
 
-    // 1) Try indexed Firestore queries first
+    // 1) Try indexed Firestore queries first 
     for (const candidate of normalizedInputs) {
-        const usernameSnap = await db
-            .collection("employees")
-            .where("employeeData.username", "==", candidate)
-            .limit(1)
-            .get();
-        if (!usernameSnap.empty) {
-            const data = usernameSnap.docs[0].data();
-            return { email: data?.employeeData?.email, employeeDocData: data };
-        }
-
-        const empIdSnap = await db
-            .collection("employees")
-            .where("employeeData.employeeId", "==", candidate)
-            .limit(1)
-            .get();
+        console.log(`[AUTH] Resolving Employee ID: "${candidate}"`);
+        
+        // Exact match on employeeData.employeeId
+        const empIdSnap = await db.collection("employees").where("employeeData.employeeId", "==", candidate).limit(1).get();
         if (!empIdSnap.empty) {
             const data = empIdSnap.docs[0].data();
-            return { email: data?.employeeData?.email, employeeDocData: data };
+            const foundEmail = data?.employeeData?.email || data?.email;
+            console.log(`[AUTH] ✅ Match found in employeeData. Email: ${foundEmail}`);
+            return { email: foundEmail, employeeDocData: data };
+        }
+
+        // Exact match on root-level employeeId
+        const rootIdSnap = await db.collection("employees").where("employeeId", "==", candidate).limit(1).get();
+        if (!rootIdSnap.empty) {
+            const data = rootIdSnap.docs[0].data();
+            const foundEmail = data?.email || data?.employeeData?.email;
+            console.log(`[AUTH] ✅ Match found at root level. Email: ${foundEmail}`);
+            return { email: foundEmail, employeeDocData: data };
         }
     }
 
@@ -134,11 +148,31 @@ const resolveEmployeeByEmployeeIdOrUsername = async (inputRaw) => {
         }
     }
 
-    // 3) If input is email-like, allow direct email login
+    // 3) If input is email-like, search for an employee record with this email
     if (input.includes("@")) {
-        return { email: input, employeeDocData: null };
+        const inputLower = input.toLowerCase();
+        console.log(`[AUTH] Resolving by email: "${inputLower}"`);
+        
+        // Search in employeeData.email
+        const emailSnap = await db.collection("employees").where("employeeData.email", "==", inputLower).limit(1).get();
+        if (!emailSnap.empty) {
+            const data = emailSnap.docs[0].data();
+            console.log(`[AUTH] ✅ Found employee by email in employeeData.`);
+            return { email: inputLower, employeeDocData: data };
+        }
+
+        // Search in root email
+        const rootEmailSnap = await db.collection("employees").where("email", "==", inputLower).limit(1).get();
+        if (!rootEmailSnap.empty) {
+            const data = rootEmailSnap.docs[0].data();
+            console.log(`[AUTH] ✅ Found employee by email at root level.`);
+            return { email: inputLower, employeeDocData: data };
+        }
+
+        return { email: inputLower, employeeDocData: null };
     }
 
+    console.log(`[AUTH] ❌ No employee record found for identifier: "${input}"`);
     return { email: null, employeeDocData: null };
 };
 
@@ -262,36 +296,46 @@ const register = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
     try {
-        let { email, username, password } = req.body;
+        // employeeId can be sent as 'username' or 'employeeId' from frontend
+        let { email, username, employeeId: empIdBody, password } = req.body;
+        
+        // Clean up inputs
+        email = String(email || "").trim().toLowerCase();
+        const employeeIdentifier = String(username || empIdBody || "").trim();
 
-        if (!email && !username) {
-            return res.status(400).json({ success: false, error: "Email or username is required" });
+        if (!email && !employeeIdentifier) {
+            return res.status(400).json({ success: false, error: "Email or Employee ID is required" });
         }
         if (!password) {
             return res.status(400).json({ success: false, error: "Password is required" });
         }
 
-        // Employee login: frontend sends `username` (employeeId/username) + password.
+        // Employee login: resolve identifier (Email or ID) to ensure they exist in our DB
         let employeeDocData = null;
-        if (username && !email) {
-            const resolved = await resolveEmployeeByEmployeeIdOrUsername(username);
-            email = resolved.email;
-            employeeDocData = resolved.employeeDocData;
+        const resolved = await resolveEmployeeByEmployeeIdOrUsername(email || employeeIdentifier);
+        
+        // Update email from resolution if needed
+        if (resolved.email) email = resolved.email;
+        employeeDocData = resolved.employeeDocData;
 
-            if (!email) {
-                return res.status(401).json({
-                    success: false,
-                    error: "No employee found with this username. Please check your username or contact HR.",
-                });
-            }
+        // If it's an Employee-only identifier and we found nothing, block immediately.
+        if (!email) {
+            return res.status(401).json({
+                success: false,
+                error: "No employee found with this ID. Please check your credentials or contact HR.",
+            });
         }
 
         // Verify password BEFORE returning success.
         const authResult = await verifyFirebasePassword(email, password);
         if (!authResult.success) {
+            const errorMsg = authResult.reason === "INVALID_CREDENTIALS" 
+                ? "Invalid Email/Employee ID or password." 
+                : `Authentication Error: ${authResult.reason}`;
+            
             return res.status(401).json({
                 success: false,
-                error: "Invalid username/email or password.",
+                error: errorMsg,
             });
         }
 
@@ -309,19 +353,41 @@ const login = async (req, res, next) => {
         let requiresPasswordChange = false;
 
         if (role === "Employee") {
-            if (employeeDocData) {
-                profileData = employeeDocData.employeeData || {};
-                requiresPasswordChange = getEmployeeRequiresPasswordChange(employeeDocData);
-                console.log(`[AUTH] Login as employee via ID match. ${email}. requiresPasswordChange=${requiresPasswordChange}`);
-            } else {
+            // STRICT CHECK: An employee MUST have a document in the 'employees' collection
+            if (!employeeDocData) {
+                // Fallback 1: Check by UID as document ID
                 const empDoc = await db.collection("employees").doc(userRecord.uid).get();
                 if (empDoc.exists) {
-                    const data = empDoc.data();
-                    profileData = data?.employeeData || {};
-                    requiresPasswordChange = getEmployeeRequiresPasswordChange(data);
-                    console.log(`[AUTH] Login as employee via UID lookup. ${email}. requiresPasswordChange=${requiresPasswordChange}`);
+                    employeeDocData = empDoc.data();
+                } else {
+                    // Fallback 2: Scan by uid field inside document (handles older records)
+                    const uidSnap = await db.collection("employees")
+                        .where("employeeData.uid", "==", userRecord.uid)
+                        .limit(1).get();
+                    if (!uidSnap.empty) {
+                        employeeDocData = uidSnap.docs[0].data();
+                        console.log(`[AUTH] ✅ Found employee by UID field in employeeData.`);
+                    } else {
+                        const rootUidSnap = await db.collection("employees")
+                            .where("uid", "==", userRecord.uid)
+                            .limit(1).get();
+                        if (!rootUidSnap.empty) {
+                            employeeDocData = rootUidSnap.docs[0].data();
+                            console.log(`[AUTH] ✅ Found employee by UID field at root level.`);
+                        }
+                    }
+                }
+                if (!employeeDocData) {
+                    console.error(`[AUTH] ❌ Blocked login: Firebase user ${email} (${userRecord.uid}) has role 'Employee' but no record in Firestore 'employees' collection.`);
+                    return res.status(403).json({
+                        success: false,
+                        error: "Account record not found. Please contact HR.",
+                    });
                 }
             }
+            
+            profileData = employeeDocData.employeeData || employeeDocData || {};
+            requiresPasswordChange = getEmployeeRequiresPasswordChange(employeeDocData);
         } else {
             const staffDoc = await db.collection("Staff").doc(userRecord.uid).get();
             if (staffDoc.exists) {
