@@ -38,6 +38,7 @@ const createEmployee = async (req, res, next) => {
             gender = "",
             address = "",
             employeeType = "Full-time",
+            workMode = "Onsite",
         } = req.body;
 
         if (!email) {
@@ -48,6 +49,12 @@ const createEmployee = async (req, res, next) => {
         const parts = name.trim().split(/\s+/);
         const firstName = parts[0] || "";
         const lastName = parts.slice(1).join(" ") || "";
+
+        // Check if email already exists in Firestore first
+        const emailCheck = await db.collection("employees").where("employeeData.email", "==", email).get();
+        if (!emailCheck.empty) {
+            return res.status(409).json({ success: false, error: "An employee with this email already exists." });
+        }
 
         // 1. Generate temp password
         const tempPassword = generateTempPassword();
@@ -62,11 +69,9 @@ const createEmployee = async (req, res, next) => {
             });
         } catch (authError) {
             if (authError.code === "auth/email-already-exists") {
-                // Still continue — just fetch existing UID
-                userRecord = await auth.getUserByEmail(email);
-            } else {
-                throw authError;
+                return res.status(409).json({ success: false, error: "An account with this email already exists in the authentication system." });
             }
+            throw authError;
         }
 
         // 3. Set role claim
@@ -95,6 +100,7 @@ const createEmployee = async (req, res, next) => {
             basicSalary: Number(basicSalary),
             allowances: Number(allowances),
             employeeType,
+            workMode,
             role: "employee",
             createdAt: new Date().toISOString(),
         };
@@ -124,8 +130,10 @@ const createEmployee = async (req, res, next) => {
             success: true,
             message: `Employee added successfully. Credentials sent to ${email}.`,
             data: {
+               uid: userRecord.uid,
                ...employeeData,
-               tempPassword, // Include for UI display
+               status: status.toLowerCase(),
+               tempPassword, 
                leaveBalance: { casual: 12, sick: 10, annual: 15 }
             }
         });
@@ -140,17 +148,55 @@ const createEmployee = async (req, res, next) => {
 const getemployee = async (req, res, next) => {
     try {
         const users = await db.collection("employees").get();
+        
+        // Fetch TODAY'S attendance for all employees
+        const today = new Date().toISOString().split("T")[0];
+        const attendanceSnapshot = await db.collection("attendance").where("date", "==", today).get();
+        
+        const attendanceMap = {};
+        attendanceSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            attendanceMap[data.employeeId] = {
+                checkin: data.checkin,
+                checkout: data.checkout
+            };
+        });
+
         const details = users.docs.map((doc) => {
             const data = doc.data();
-            return {
+            const attendance = attendanceMap[doc.id] || null;
+            
+            let todayDuration = 0;
+            if (attendance) {
+                if (attendance.checkout) {
+                    todayDuration = attendance.totalHours || 0;
+                } else if (attendance.checkin) {
+                    // LIVE Calculation for active sessions
+                    const start = new Date(attendance.checkin).getTime();
+                    const now = new Date().getTime();
+                    todayDuration = parseFloat(((now - start) / (1000 * 60 * 60)).toFixed(2));
+                }
+            }
+
+            const flattened = {
                 uid: doc.id,
                 ...data,
-                ...(data.employeeData || {})
+                ...(data.employeeData || {}),
+                todayCheckIn: attendance?.checkin || null,
+                todayCheckOut: attendance?.checkout || null,
+                todayDuration: todayDuration,
+                isActiveNow: !!(attendance?.checkin && !attendance?.checkout)
             };
+            
+            if (!flattened.employeeId) {
+                flattened.employeeId = flattened.id || `EMP-${doc.id.slice(0, 8).toUpperCase()}`;
+            }
+            
+            return flattened;
         });
         res.json({ success: true, data: details });
     } catch (error) {
-        console.log(error);
+        console.log("getemployee error:", error);
         next(error);
     }
 };
@@ -161,11 +207,26 @@ const getemployee = async (req, res, next) => {
 const getemployeebyid = async (req, res, next) => {
     try {
         const { uid } = req.params;
-        const user = await db.collection("employees").doc(uid).get();
-        if (!user.exists) {
+        let user = await db.collection("employees").doc(uid).get();
+        let data = {};
+        let exists = false;
+
+        if (user.exists) {
+            data = user.data();
+            exists = true;
+        } else {
+            // Check Staff collection for HR/Admin profiles
+            user = await db.collection("Staff").doc(uid).get();
+            if (user.exists) {
+                data = user.data();
+                exists = true;
+            }
+        }
+
+        if (!exists) {
             return res.status(404).json({ success: false, error: "Employee not found" });
         }
-        const data = user.data();
+
         res.json({ 
             success: true, 
             uid: user.id, 
@@ -189,11 +250,92 @@ const updateemployee = async (req, res, next) => {
         const { uid } = req.params;
         const updatedata = req.body;
         const userRef = db.collection("employees").doc(uid);
-        await userRef.update({ "employeeData": { ...updatedata } });
-        res.json({ success: true, message: "Employee updated successfully" });
+        
+        // Fetch existing data to safely merge nested employeeData
+        const existingDoc = await userRef.get();
+        if (!existingDoc.exists) {
+            return res.status(404).json({ success: false, error: "Employee not found" });
+        }
+        
+        const existingData = existingDoc.data();
+        const mergedEmployeeData = { 
+            ...(existingData.employeeData || {}), 
+            ...updatedata 
+        };
+        
+        await userRef.update({ employeeData: mergedEmployeeData });
+        
+        // Return the full merged object for immediate frontend sync
+        res.json({ 
+            success: true, 
+            message: "Employee updated successfully",
+            data: {
+                uid: existingDoc.id,
+                ...existingData,
+                ...mergedEmployeeData
+            }
+        });
     } catch (error) {
         next(error);
     }
 };
 
-module.exports = { createEmployee, getemployee, getemployeebyid, updateemployee };
+/**
+ * Delete employee.
+ */
+const deleteemployee = async (req, res, next) => {
+    try {
+        const { uid } = req.params;
+        const userRef = db.collection("employees").doc(uid);
+        await userRef.delete();
+        await auth.deleteUser(uid);
+        res.json({ success: true, message: "Employee deleted successfully" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get employee documents.
+ */
+const getEmployeeDocuments = async (req, res, next) => {
+    try {
+        const { uid } = req.params;
+        const snapshot = await db.collection("documents").where("uid", "==", uid).get();
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json({ success: true, data: docs });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get employee timeline.
+ */
+const getEmployeeTimeline = async (req, res, next) => {
+    try {
+        const { uid } = req.params;
+        const snapshot = await db.collection("timeline").where("uid", "==", uid).orderBy("date", "desc").get();
+        let timeline = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (timeline.length === 0) {
+            // Fallback: Generate onboarding event if timeline is empty
+            const empDoc = await db.collection("employees").doc(uid).get();
+            if (empDoc.exists) {
+                const data = empDoc.data()?.employeeData || {};
+                timeline = [{
+                    event: "Company Onboarding",
+                    date: data.joiningDate || new Date().toISOString().split("T")[0],
+                    description: "Joined the organization and completed basic orientation.",
+                    type: "milestone"
+                }];
+            }
+        }
+        
+        res.json({ success: true, data: timeline });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { createEmployee, getemployee, getemployeebyid, updateemployee, deleteemployee, getEmployeeDocuments, getEmployeeTimeline };
