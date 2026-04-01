@@ -10,6 +10,7 @@ const {performance} = require('../controllers/performancecontroller')
 //employee routes
 const {createtask,gettasks,updatetaskstatus} = require('../controllers/taskcontroller')
 const {addEvent, getEvents, updateEvent, deleteEvent} = require('../controllers/calendarcontroller')
+const {getAnnouncements, createAnnouncement, deleteAnnouncement} = require('../controllers/announcementcontroller')
 
 // Auth routes — matches frontend's { name, email, password, role }
 router.post("/register", registerUser)
@@ -40,6 +41,12 @@ router.post('/calendar/add-event', verifyToken, addEvent)
 router.get('/calendar/events', verifyToken, getEvents)
 router.put('/calendar/update-event/:id', verifyToken, updateEvent)
 router.delete('/calendar/delete-event/:id', verifyToken, deleteEvent)
+
+// Announcement Routes
+router.get('/announcements', verifyToken, getAnnouncements)
+router.post('/announcements', verifyToken, createAnnouncement)
+router.delete('/announcements/:id', verifyToken, deleteAnnouncement)
+
 router.get('/me', verifyToken, (req, res) => {
     res.json({ success: true, user: req.user });
 })
