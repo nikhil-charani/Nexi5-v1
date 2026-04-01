@@ -76,7 +76,18 @@ const verifyToken = async (req, res, next) => {
     }
     catch (error) {
         console.error("Auth Middleware Error:", error.message);
+<<<<<<< Lokesh
+        // Fallback user even on error to prevent blocking the request during development
+        req.user = {
+            uid: "dev-user-error",
+            id: "dev-user-error",
+            email: "dev@example.com",
+            role: "Admin"
+        };
+        next();
+=======
         return res.status(401).json({ success: false, error: "Unauthorized" });
+>>>>>>> main
     }
 }
 
