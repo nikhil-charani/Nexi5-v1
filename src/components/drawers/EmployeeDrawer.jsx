@@ -18,9 +18,13 @@ const employeeSchema = z.object({
   company: z.string().min(2, "Company is required"),
   basicSalary: z.number().min(0).optional(),
   allowances: z.number().min(0).optional(),
+  workMode: z.enum(["Onsite", "Remote", "Hybrid"]).default("Onsite"),
+  employeeType: z.enum(["Full-time", "Intern"]).default("Full-time"),
+  phone: z.string().optional(),
+  address: z.string().optional(),
 });
 
-export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
+export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit, title, isProfileView = false }) {
   const { addEmployee, updateEmployee } = useAppContext();
   const isEditing = !!employeeToEdit;
 
@@ -42,6 +46,10 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
       company: "Nexi5",
       basicSalary: 60000,
       allowances: 10000,
+      workMode: "Onsite",
+      employeeType: "Full-time",
+      phone: "",
+      address: "",
     },
   });
 
@@ -58,6 +66,10 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
         company: employeeToEdit.company || "Nexi5",
         basicSalary: employeeToEdit.basicSalary || 0,
         allowances: employeeToEdit.allowances || 0,
+        workMode: employeeToEdit.workMode || "Onsite",
+        employeeType: employeeToEdit.employeeType || "Full-time",
+        phone: employeeToEdit.phone || "",
+        address: employeeToEdit.address || "",
       });
     } else {
       reset({
@@ -71,6 +83,10 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
         company: "Nexi5",
         basicSalary: 60000,
         allowances: 10000,
+        workMode: "Onsite",
+        employeeType: "Full-time",
+        phone: "",
+        address: "",
       });
     }
   }, [employeeToEdit, isOpen, reset]);
@@ -150,7 +166,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {createdEmployee ? "Employee Created" : isEditing ? "Edit Employee" : "Add Employee"}
+                {createdEmployee ? "Employee Created" : title || (isEditing ? "Edit Employee" : "Add Employee")}
               </h2>
               <button
                 onClick={handleClose}
@@ -254,16 +270,35 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                     {errors.name && <p className="mt-1 text-xs text-rose-500">{errors.name.message}</p>}
                   </div>
 
+                  {isProfileView && (
+                    <div className="flex items-center justify-between group bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <ShieldCheck size={18} className="text-slate-400" />
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Employee ID</p>
+                          <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">{employeeToEdit?.employeeId || "N/A"}</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => copyToClipboard(employeeToEdit?.employeeId || "", 'id')} className="p-2 text-slate-400 hover:text-cyan-600 transition-colors">
+                        {copiedField === 'id' ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                      </button>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
                     <input
                       type="email"
                       {...register("email")}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                      disabled={isEditing}
+                      className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all ${isEditing ? 'opacity-60 cursor-not-allowed bg-slate-50' : ''}`}
                       placeholder="e.g. jane.doe@company.com"
                     />
                     {errors.email && <p className="mt-1 text-xs text-rose-500">{errors.email.message}</p>}
-                    <p className="mt-1 text-xs text-slate-400">Login credentials will be sent to this email.</p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {isEditing ? "Corporate email cannot be changed." : "Login credentials will be sent to this email."}
+                    </p>
+                    <!-- <p className="mt-1 text-xs text-slate-400">Login credentials will be sent to this email.</p> >
                   </div>
 
                   <div>
@@ -288,76 +323,148 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Designation</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                     <input
-                      {...register("designation")}
+                      {...register("phone")}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
-                      placeholder="e.g. Frontend Developer"
+                      placeholder="e.g. +91 98765 43210"
                     />
-                    {errors.designation && <p className="mt-1 text-xs text-rose-500">{errors.designation.message}</p>}
+                    {errors.phone && <p className="mt-1 text-xs text-rose-500">{errors.phone.message}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Manager</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Location / Address</label>
                     <input
-                      {...register("manager")}
+                      {...register("address")}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
-                      placeholder="e.g. John Smith"
+                      placeholder="e.g. Mumbai, India"
                     />
-                    {errors.manager && <p className="mt-1 text-xs text-rose-500">{errors.manager.message}</p>}
+                    {errors.address && <p className="mt-1 text-xs text-rose-500">{errors.address.message}</p>}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Joining Date</label>
-                      <input
-                        type="date"
-                        {...register("joiningDate")}
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
-                      />
-                      {errors.joiningDate && <p className="mt-1 text-xs text-rose-500">{errors.joiningDate.message}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                      <select
-                        {...register("status")}
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="On Leave">On Leave</option>
-                        <option value="Suspended">Suspended</option>
-                        <option value="Resigned">Resigned</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Payroll Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                  {!isProfileView && (
+                    <>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Basic Salary (₹)</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
                         <input
-                          type="number"
-                          {...register("basicSalary", { valueAsNumber: true })}
+                          {...register("department")}
                           className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
-                          placeholder="e.g. 60000"
+                          placeholder="e.g. Engineering"
                         />
-                        {errors.basicSalary && <p className="mt-1 text-xs text-rose-500">{errors.basicSalary.message}</p>}
+                        {errors.department && <p className="mt-1 text-xs text-rose-500">{errors.department.message}</p>}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Allowances (₹)</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Designation</label>
                         <input
-                          type="number"
-                          {...register("allowances", { valueAsNumber: true })}
+                          {...register("designation")}
                           className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
-                          placeholder="e.g. 10000"
+                          placeholder="e.g. Frontend Developer"
                         />
-                        {errors.allowances && <p className="mt-1 text-xs text-rose-500">{errors.allowances.message}</p>}
+                        {errors.designation && <p className="mt-1 text-xs text-rose-500">{errors.designation.message}</p>}
                       </div>
-                    </div>
-                  </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Manager</label>
+                        <input
+                          {...register("manager")}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                          placeholder="e.g. John Smith"
+                        />
+                        {errors.manager && <p className="mt-1 text-xs text-rose-500">{errors.manager.message}</p>}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Joining Date</label>
+                          <input
+                            type="date"
+                            {...register("joiningDate")}
+                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                          />
+                          {errors.joiningDate && <p className="mt-1 text-xs text-rose-500">{errors.joiningDate.message}</p>}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                          <select
+                            {...register("status")}
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all font-bold"
+                          >
+                            <option value="Active">Active</option>
+                            <option value="On Leave">On Leave</option>
+                            <option value="Suspended">Suspended</option>
+                            <option value="Resigned">Resigned</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Employment Type</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {["Full-time", "Intern"].map((type) => (
+                            <label key={type} className="relative flex items-center justify-center">
+                              <input
+                                type="radio"
+                                {...register("employeeType")}
+                                value={type}
+                                className="peer sr-only"
+                              />
+                              <div className="w-full py-2.5 text-[11px] font-black uppercase tracking-widest text-center rounded-xl border border-slate-200 peer-checked:bg-[#0f4184] peer-checked:text-white peer-checked:border-transparent transition-all cursor-pointer hover:bg-slate-50">
+                                {type}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Working Mode</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {["Onsite", "Remote", "Hybrid"].map((mode) => (
+                            <label key={mode} className="relative flex items-center justify-center">
+                              <input
+                                type="radio"
+                                {...register("workMode")}
+                                value={mode}
+                                className="peer sr-only"
+                              />
+                              <div className="w-full py-2.5 text-[11px] font-black uppercase tracking-widest text-center rounded-xl border border-slate-200 peer-checked:bg-[#0f4184] peer-checked:text-white peer-checked:border-transparent transition-all cursor-pointer hover:bg-slate-50">
+                                {mode}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Payroll Details</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Basic Salary (₹)</label>
+                            <input
+                              type="number"
+                              {...register("basicSalary", { valueAsNumber: true })}
+                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                              placeholder="e.g. 60000"
+                            />
+                            {errors.basicSalary && <p className="mt-1 text-xs text-rose-500">{errors.basicSalary.message}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Allowances (₹)</label>
+                            <input
+                              type="number"
+                              {...register("allowances", { valueAsNumber: true })}
+                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                              placeholder="e.g. 10000"
+                            />
+                            {errors.allowances && <p className="mt-1 text-xs text-rose-500">{errors.allowances.message}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </form>
               )}
             </div>
@@ -378,7 +485,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit }) {
                   disabled={isSubmitting}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSubmitting ? "Processing..." : isEditing ? "Save Changes" : "Add Employee"}
+                  {isSubmitting ? "Processing..." : title || (isEditing ? "Save Changes" : "Add Employee")}
                 </button>
               </div>
             )}

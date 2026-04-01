@@ -276,7 +276,6 @@ const getAttendanceHistory = async (req, res, next) => {
   try {
     console.log("Fetching attendance history for UID:", req.user?.uid);
     const uid = req.user.uid;
-    // Removed orderBy to avoid Firestore index requirement which often causes 500/400 errors if not set
     const snapshot = await db.collection("attendance")
       .where("employeeId", "==", uid)
       .get();
@@ -286,7 +285,6 @@ const getAttendanceHistory = async (req, res, next) => {
       ...doc.data()
     }));
 
-    // Sort manually if needed, or leave to frontend
     data.sort((a, b) => b.date.localeCompare(a.date));
 
     res.json({
@@ -299,8 +297,33 @@ const getAttendanceHistory = async (req, res, next) => {
   }
 };
 
+const getAttendanceHistoryByUid = async (req, res, next) => {
+  try {
+    const { uid } = req.params;
+    console.log("Fetching attendance history for target UID:", uid);
+    
+    const snapshot = await db.collection("attendance")
+      .where("employeeId", "==", uid)
+      .get();
 
-module.exports = { checkin, checkout, applyleave, approveleave, rejectleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory };
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    data.sort((a, b) => b.date.localeCompare(a.date));
+
+    res.json({
+      success: true,
+      data: data
+    });
+  } catch (error) {
+    console.error("getAttendanceHistoryByUid Error:", error);
+    next(error);
+  }
+};
+
+module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid };
 
 
 

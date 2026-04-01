@@ -23,7 +23,7 @@ function Employees() {
       const term = search.toLowerCase();
       const nameMatch = (emp.name || "").toLowerCase().includes(term);
       const deptMatch = (emp.department || "").toLowerCase().includes(term);
-      const idMatch = (emp.id || emp.employeeId || "").toLowerCase().includes(term);
+      const idMatch = (emp.employeeId || emp.uid || emp.id || "").toLowerCase().includes(term);
       return nameMatch || deptMatch || idMatch;
     }
   ).sort((a, b) => {
@@ -63,137 +63,137 @@ Password: ${newCredentials.password}`);
     toast.success("Credentials copied to clipboard!");
     setTimeout(() => setCopied(false), 2e3);
   };
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Active":
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#0f4184]/10 text-[#0b3166]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#0f4184]" />Active
-        </span>;
-      case "On Leave":
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />On Leave
-        </span>;
-      case "Suspended":
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />Suspended
-        </span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600">{status}</span>;
-    }
+  const getStatusPill = (status) => {
+    const config = {
+      Active: { bg: "bg-white text-slate-900", dot: "bg-emerald-500" },
+      "On Leave": { bg: "bg-white text-slate-900", dot: "bg-amber-500" },
+      Suspended: { bg: "bg-white text-slate-900", dot: "bg-rose-500" }
+    };
+    const c = config[status] || { bg: "bg-white text-slate-900", dot: "bg-slate-300" };
+    return <span className={`inline-flex items-center gap-2.5 px-3 py-1 rounded-full text-[11px] font-black ${c.bg}`}>
+      <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+      {status}
+    </span>;
   };
+
   const SortTh = ({ label, sortKey }) => <th
     onClick={() => requestSort(sortKey)}
-    className="px-6 py-4 font-semibold text-gray-500 uppercase text-xs tracking-wider cursor-pointer hover:text-primary transition-colors select-none"
+    className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[3px] cursor-pointer group"
   >
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       {label}
-      <ArrowUpDown size={12} className={sortConfig?.key === sortKey ? "text-primary" : "text-gray-300"} />
+      <ArrowUpDown size={10} className={`transition-opacity ${sortConfig?.key === sortKey ? "text-[#0f4184] opacity-100" : "opacity-0 group-hover:opacity-40"}`} />
     </div>
   </th>;
-  return <div className="space-y-5 h-full flex flex-col">
-    {
-      /* Header */
-    }
-    <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+
+  return <div className="space-y-6 flex flex-col h-full animate-in fade-in duration-700 pb-10">
+    {/* Page Header */}
+    <div className="flex justify-between items-center px-4">
       <div>
-        <div className="flex items-center gap-3 mb-1 text-primary">
-          <Users size={24} className="shrink-0" />
-          <h1 className="text-2xl font-bold tracking-tight text-textPrimary">Employees</h1>
-        </div>
-        <p className="text-textSecondary text-sm">Manage your team members and their information</p>
+        <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 select-none flex items-center gap-3">
+          Employees
+        </h1>
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[4px]">Workforce Directory & Unit Management</p>
       </div>
       {isAdminOrHRHead && (
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white text-sm font-semibold bg-gradient-to-r from-[#0f4184] to-[#0b3166] hover:opacity-90 transition-all shadow-sm"
+          className="flex items-center gap-3 px-8 py-4 rounded-2xl text-white text-[11px] font-black uppercase tracking-[3px] bg-[#0f4184] hover:bg-slate-900 hover:shadow-2xl transition-all active:scale-95 shadow-lg shadow-blue-900/10"
         >
-          <Plus size={18} />
+          <Plus size={18} strokeWidth={3} />
           Add Employee
         </button>
       )}
     </div>
 
-    {
-      /* Table Card */
-    }
-    <div className="bg-white rounded-xl border border-gray-200 flex flex-col flex-1 overflow-hidden shadow-nexi5">
-      <div className="p-4 border-b border-gray-100 flex gap-4 items-center">
-        <div className="relative flex-1 sm:max-w-md w-full group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#0f4184] transition-colors duration-300" size={18} />
+    {/* Clean Management Console */}
+    <div className="bg-white rounded-[2rem] border border-slate-100 flex flex-col overflow-hidden shadow-[0_30px_60px_-20px_rgba(0,0,0,0.04)]">
+      <div className="p-8 pb-4 flex flex-col lg:flex-row gap-6 items-center">
+        <div className="relative flex-1 w-full group">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0f4184] transition-colors" size={18} />
           <input
             type="text"
-            placeholder="Search by name, ID, or department..."
+            placeholder="Search by identity, department, or corporate ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-2xl py-3 pl-12 pr-10 text-[14px] sm:text-[15px] focus:bg-white focus:border-[#0f4184] focus:ring-[4px] focus:ring-[#0f4184]/10 outline-none transition-all duration-300 placeholder:text-gray-400 font-medium text-textPrimary shadow-sm hover:border-gray-300"
+            className="w-full bg-slate-50/30 border border-slate-100 rounded-2xl py-4 pl-16 pr-10 text-sm focus:bg-white focus:border-[#0f4184] outline-none transition-all placeholder:text-slate-300 font-bold text-slate-700"
           />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-            >
-              <X size={16} />
-            </button>
-          )}
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-textSecondary hover:bg-gray-50 transition-colors">
-          <Filter size={16} />
-          <span className="hidden sm:inline">Filters</span>
-        </button>
-        <span className="text-xs font-semibold text-textSecondary ml-auto hidden sm:block">{filteredEmployees.length} employees</span>
+        <div className="flex items-center gap-4 w-full lg:w-auto">
+          <button className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all">
+            <Filter size={16} /> Filters
+          </button>
+          <span className="text-[10px] font-black text-[#0f4184] bg-blue-50/50 px-6 py-4 rounded-2xl border border-blue-100/50 uppercase tracking-widest whitespace-nowrap">
+            {filteredEmployees.length} Units Active
+          </span>
+        </div>
       </div>
 
-      {
-        /* Table */
-      }
-      <div className="overflow-x-auto flex-1 custom-scrollbar">
+      <div className="overflow-x-auto flex-1">
         <table className="w-full text-left whitespace-nowrap">
-          <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-gray-100">
-            <tr>
-              <SortTh label="Employee" sortKey="name" />
-              <SortTh label="ID" sortKey="id" />
+          <thead>
+            <tr className="border-b border-slate-50">
+              <SortTh label="Identity & Role" sortKey="name" />
+              <SortTh label="Corporate ID" sortKey="employeeId" />
               <SortTh label="Department" sortKey="department" />
               <SortTh label="Joining Date" sortKey="joiningDate" />
-              <th className="px-6 py-4 font-semibold text-gray-500 uppercase text-xs tracking-wider">Status</th>
-              <th className="px-6 py-4 font-semibold text-gray-500 uppercase text-xs tracking-wider text-right">Actions</th>
+              <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[3px]">Status</th>
+              <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[3px] text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-50/50">
             {filteredEmployees.map((emp, index) => <motion.tr
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.03, duration: 0.2 }}
-              key={emp.id}
-              className="group hover:bg-[#F0F9FF] transition-colors cursor-pointer"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.02 }}
+              key={emp.uid || emp.id || index}
+              className="group hover:bg-blue-50 transition-colors cursor-pointer"
             >
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0f4184] to-primary flex items-center justify-center text-white text-xs font-bold shadow-sm ring-2 ring-gray-50 uppercase">
-                      {getInitials(emp.name)}
+              <td className="px-8 py-5">
+                <div className="flex items-center gap-6">
+                  <div className="relative shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-[#0f4184] text-white flex items-center justify-center text-xs font-black shadow-inner uppercase group-hover:scale-105 transition-transform duration-300">
+                        {emp.profileImage ? (
+                            <img src={emp.profileImage} alt={emp.name} className="w-full h-full rounded-xl object-cover" />
+                        ) : (
+                            getInitials(emp.name)
+                        )}
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${emp.status === "Active" ? "bg-emerald-500" : "bg-slate-300"}`} />
                     </div>
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${emp.status === "Active" ? "bg-[#0f4184]" : emp.status === "On Leave" ? "bg-orange-400" : "bg-red-500"}`} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-textPrimary group-hover:text-primary transition-colors">{emp.name}</p>
-                    <p className="text-xs text-textSecondary mt-0.5">{emp.designation}</p>
+                    <p className="text-[14px] font-black text-slate-900 group-hover:text-[#0f4184] transition-colors leading-tight mb-1">{emp.name}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{emp.designation}</p>
+                        {emp.workMode && (
+                            <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200/50">
+                                {emp.workMode}
+                            </span>
+                        )}
+                        {emp.employeeType && (
+                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md border ${emp.employeeType === 'Intern' ? 'bg-amber-50 text-amber-600 border-amber-200/50' : 'bg-cyan-50 text-cyan-600 border-cyan-200/50'}`}>
+                                {emp.employeeType}
+                            </span>
+                        )}
+                    </div>
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4">
-                <span className="text-xs font-mono font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">{emp.id}</span>
+              <td className="px-6 py-5">
+                <span className="text-[11px] font-black font-mono text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100/50 uppercase tracking-tighter shadow-sm">{emp.employeeId || emp.id || "N/A"}</span>
               </td>
-              <td className="px-6 py-4">
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#0f4184]/10 text-[#0b3166]">{emp.department}</span>
+              <td className="px-6 py-5">
+                <span className="inline-flex px-3 py-1.5 rounded-lg bg-blue-50/50 text-[10px] font-black text-[#0f4184] border border-blue-100/30 uppercase tracking-widest leading-none">{emp.department}</span>
               </td>
-              <td className="px-6 py-4 text-textSecondary text-sm font-medium">{emp.joiningDate}</td>
-              <td className="px-6 py-4">{getStatusBadge(emp.status)}</td>
-              <td className="px-6 py-4 text-right">
-                <div className="flex justify-end gap-1">
+              <td className="px-6 py-5 text-[12px] font-bold text-slate-500">{emp.joiningDate || "— — —"}</td>
+              <td className="px-6 py-5">
+                {getStatusPill(emp.status)}
+              </td>
+              <td className="px-8 py-5 text-right">
+                <div className="flex justify-end gap-2 transition-opacity">
                   <button
-                    onClick={() => navigate(`/dashboard/employees/${emp.id}`)}
-                    className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors"
-                    title="View Profile"
+                    onClick={() => navigate(`/dashboard/employees/${emp.employeeId || emp.uid || emp.id}`)}
+                    className="p-2 text-slate-300 hover:text-[#0f4184] transition-colors"
                   >
                     <Eye size={16} />
                   </button>
@@ -201,38 +201,28 @@ Password: ${newCredentials.password}`);
                   {isAdminOrHRHead && (
                     <DropdownMenu
                       trigger={
-                        <button className="p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                        <button className="p-2 text-slate-300 hover:text-slate-900 transition-colors">
                           <MoreVertical size={16} />
                         </button>
                       }
                     >
-                      <DropdownMenuItem onClick={() => handleEdit(emp)}><Edit2 size={14} /> Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(emp.id)} destructive><Trash2 size={14} /> Delete</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEdit(emp)}><Edit2 size={13} /> Edit Unit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(emp.uid || emp.id)} destructive><Trash2 size={13} /> Purge Identity</DropdownMenuItem>
                     </DropdownMenu>
                   )}
                 </div>
               </td>
             </motion.tr>)}
-            {filteredEmployees.length === 0 && <tr>
-              <td colSpan={6} className="py-16 text-center">
-                <Users size={36} className="mx-auto mb-3 text-slate-200 dark:text-slate-700" />
-                <p className="font-semibold text-slate-400">No employees found</p>
-                <p className="text-sm text-slate-300 dark:text-slate-600 mt-1">Try adjusting your search terms</p>
-              </td>
-            </tr>}
           </tbody>
         </table>
       </div>
 
-      {
-        /* Footer */
-      }
-      <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
-        <span className="text-xs text-textSecondary font-semibold">Showing {filteredEmployees.length} of {employees.length} employees</span>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 hover:bg-white disabled:opacity-40 transition-colors" disabled>← Previous</button>
-          <button className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold shadow-sm shadow-primary/20">1</button>
-          <button className="px-4 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 hover:bg-white disabled:opacity-40 transition-colors" disabled>Next →</button>
+      <div className="p-6 border-t border-slate-50 flex items-center justify-between text-[10px] font-black text-slate-300 uppercase tracking-[3px] bg-slate-50/10">
+        <span>Showing {filteredEmployees.length} of {employees.length} Units</span>
+        <div className="flex gap-4">
+          <button className="px-6 py-2 rounded-xl text-slate-300 hover:text-[#0f4184] transition-colors" disabled>Previous</button>
+          <div className="w-8 h-8 bg-[#0f4184] text-white flex items-center justify-center rounded-lg shadow-lg shadow-blue-900/10">1</div>
+          <button className="px-6 py-2 rounded-xl text-slate-300 hover:text-[#0f4184] transition-colors" disabled>Next</button>
         </div>
       </div>
     </div>
@@ -240,6 +230,7 @@ Password: ${newCredentials.password}`);
     <EmployeeDrawer isOpen={isDrawerOpen} onClose={handleDrawerClose} employeeToEdit={employeeToEdit} />
   </div>;
 }
+
 export {
   Employees as default
 };

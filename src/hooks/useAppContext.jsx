@@ -578,6 +578,88 @@ export function AppProvider({ children }) {
   const addDocument = (doc) => createItem("documents", doc, setDocuments);
   const deleteDocument = (id) => deleteItem("documents", id, setDocuments);
 
+  const getAttendanceHistoryForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/attendance/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch history failed:", e);
+      return [];
+    }
+  };
+
+  const getPayrollHistoryForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/payroll/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch payroll failed:", e);
+      return [];
+    }
+  };
+
+  const getPerformanceForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/performance/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch performance failed:", e);
+      return [];
+    }
+  };
+
+  const getDocumentsForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/documents/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch documents failed:", e);
+      return [];
+    }
+  };
+
+  const getTimelineForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/timeline/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch timeline failed:", e);
+      return [];
+    }
+  };
+
+  const fetchEmployeeById = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/getempbyid/${uid}`, { 
+        method: "POST", // The backend route matches post/get depending on index.js, but our index.js says router.post("/getempbyid/:uid")
+        headers: { 
+            "Authorization": `Bearer ${currentUser?.token}`,
+            "Content-Type": "application/json"
+        } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : null;
+    } catch (e) {
+      console.error("fetch employee failed:", e);
+      return null;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       employees, setEmployees, leaves, setLeaves,
@@ -599,7 +681,9 @@ export function AppProvider({ children }) {
       notifications, announcements,
       tasks, addTask, updateTaskStatus, addAnnouncement,
       attendance, documents, addDocument, deleteDocument,
-      fetchPayslips, getPerformance, isLoading
+      fetchPayslips, getPerformance, isLoading,
+      getAttendanceHistoryForUser, fetchEmployeeById,
+      getPayrollHistoryForUser, getPerformanceForUser, getDocumentsForUser, getTimelineForUser
     }}>
       {children}
     </AppContext.Provider>
