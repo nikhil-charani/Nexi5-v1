@@ -377,10 +377,10 @@ function Dashboard() {
     return (
       <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard delay={0} title="Total Employees" value={hrMetrics.totalEmployees} icon={Users} trend={12} color="blue" />
-          <StatCard delay={0.08} title="Active Projects" value={hrMetrics.activeProjects} icon={ClipboardList} trend={4} color="emerald" />
-          <StatCard delay={0.16} title="Pending Leaves" value={hrMetrics.pendingLeaves} icon={CalendarClock} trend={-2} color="amber" />
-          <StatCard delay={0.24} title="Open Concerns" value={hrMetrics.openGrievances} icon={CheckCircle2} trend={20} color="rose" />
+          <StatCard delay={0} title="Total Employees" value={hrMetrics.totalEmployees} icon={Users} trend={12} color="blue" onClick={() => navigate('/dashboard/employees')} />
+          <StatCard delay={0.08} title="Active Projects" value={hrMetrics.activeProjects} icon={ClipboardList} trend={4} color="emerald" onClick={() => navigate('/dashboard/projects')} />
+          <StatCard delay={0.16} title="Pending Leaves" value={hrMetrics.pendingLeaves} icon={CalendarClock} trend={-2} color="amber" onClick={() => navigate('/dashboard/leave')} />
+          <StatCard delay={0.24} title="Open Concerns" value={hrMetrics.openGrievances} icon={CheckCircle2} trend={20} color="rose" onClick={() => navigate('/dashboard/grievances')} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
@@ -400,7 +400,7 @@ function Dashboard() {
   const AccountantView = () => (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard delay={0} title="Monthly Payroll" value={accountantMetrics.monthlyPayroll} icon={TrendingUp} trend={3} color="emerald" />
+        <StatCard delay={0} title="Monthly Payroll" value={accountantMetrics.monthlyPayroll} icon={TrendingUp} trend={3} color="emerald" onClick={() => navigate('/dashboard/payroll')} />
         <StatCard delay={0.08} title="Monthly Expenses" value={accountantMetrics.expenses} icon={TrendingUp} trend={-5} color="blue" />
         <StatCard delay={0.16} title="Pending Invoices" value={accountantMetrics.pendingInvoices} icon={ClipboardList} trend={0} color="amber" />
         <StatCard delay={0.24} title="Tax Status" value={accountantMetrics.taxFilings} icon={CheckCircle2} trend={100} color="rose" />
@@ -412,7 +412,7 @@ function Dashboard() {
   const RecruiterView = () => (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard delay={0} title="Active Candidates" value={recruiterMetrics.activeCandidates} icon={Users} trend={15} color="blue" />
+        <StatCard delay={0} title="Active Candidates" value={recruiterMetrics.activeCandidates} icon={Users} trend={15} color="blue" onClick={() => navigate('/dashboard/candidates')} />
         <StatCard delay={0.08} title="Open Positions" value={recruiterMetrics.openPositions} icon={ClipboardList} trend={2} color="amber" />
         <StatCard delay={0.16} title="Interviews Today" value={recruiterMetrics.interviewsToday} icon={CalendarDays} trend={50} color="emerald" />
         <StatCard delay={0.24} title="Shortlisted" value={recruiterMetrics.shortlisted} icon={CheckCircle2} trend={5} color="rose" />
@@ -424,10 +424,10 @@ function Dashboard() {
   const SalesView = () => (
     <div className="space-y-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard delay={0} title="Pipeline Revenue" value={salesMetrics.revenue} icon={TrendingUp} trend={18} color="emerald" />
-        <StatCard delay={0.08} title="Total Leads" value={salesMetrics.totalLeads} icon={Users} trend={10} color="blue" />
-        <StatCard delay={0.16} title="Active Clients" value={salesMetrics.activeClients} icon={UserCheck} trend={2} color="amber" />
-        <StatCard delay={0.24} title="Closed Deals" value={salesMetrics.closedDeals} icon={CheckCircle2} trend={25} color="rose" />
+        <StatCard delay={0} title="Pipeline Revenue" value={salesMetrics.revenue} icon={TrendingUp} trend={18} color="emerald" onClick={() => navigate('/dashboard/deals')} />
+        <StatCard delay={0.08} title="Total Leads" value={salesMetrics.totalLeads} icon={Users} trend={10} color="blue" onClick={() => navigate('/dashboard/leads')} />
+        <StatCard delay={0.16} title="Active Clients" value={salesMetrics.activeClients} icon={UserCheck} trend={2} color="amber" onClick={() => navigate('/dashboard/clients')} />
+        <StatCard delay={0.24} title="Closed Deals" value={salesMetrics.closedDeals} icon={CheckCircle2} trend={25} color="rose" onClick={() => navigate('/dashboard/deals')} />
       </div>
       <PersonalOverview title="My Sales Activity" />
       {renderChartsSection('sales')}
@@ -437,10 +437,10 @@ function Dashboard() {
   const ManagerView = () => (
     <div className="space-y-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard delay={0} title="Team Size" value={managerMetrics.teamSize} icon={Users} trend={0} color="blue" />
-        <StatCard delay={0.08} title="Active Projects" value={hrMetrics.activeProjects} icon={ClipboardList} trend={0} color="emerald" />
-        <StatCard delay={0.16} title="Team Attendance" value={managerMetrics.teamAttendance} icon={UserCheck} trend={2} color="amber" />
-        <StatCard delay={0.24} title="Overdue Tasks" value={managerMetrics.overdueTasks} icon={CheckCircle2} trend={-10} color="rose" />
+        <StatCard delay={0} title="Team Size" value={managerMetrics.teamSize} icon={Users} trend={0} color="blue" onClick={() => navigate('/dashboard/directory')} />
+        <StatCard delay={0.08} title="Active Projects" value={hrMetrics.activeProjects} icon={ClipboardList} trend={0} color="emerald" onClick={() => navigate('/dashboard/projects')} />
+        <StatCard delay={0.16} title="Team Attendance" value={managerMetrics.teamAttendance} icon={UserCheck} trend={2} color="amber" onClick={() => navigate('/dashboard/attendance')} />
+        <StatCard delay={0.24} title="Overdue Tasks" value={managerMetrics.overdueTasks} icon={CheckCircle2} trend={-10} color="rose" onClick={() => navigate('/dashboard/tasks')} />
       </div>
       <PersonalOverview title="My Management Tasks" />
       {renderChartsSection('attendance')}

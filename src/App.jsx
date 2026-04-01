@@ -28,6 +28,7 @@ import Clients from "./pages/Clients";
 import Deals from "./pages/Deals";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/auth/AuthPage";
+import Assets from "./pages/assets/Assets";
 import ScrollToTop from "./components/common/ScrollToTop";
 import LoadingScreen from "./components/common/LoadingScreen";
 import { useState } from "react";
@@ -79,6 +80,7 @@ const AppRoutes = () => {
           <Route path="leads" element={<Leads />} />
           <Route path="clients" element={<Clients />} />
           <Route path="deals" element={<Deals />} />
+          <Route path="assets" element={<Assets />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -28,7 +28,8 @@ import {
   LogOut,
   User,
   MoreVertical,
-  Activity
+  Activity,
+  Package
 } from "lucide-react";
 import { getInitials } from "../lib/stringUtils";
 import Topbar from "../components/Topbar";
@@ -66,7 +67,8 @@ const navGroups = [
       { name: "Attendance Analytics", path: "/dashboard/attendance-analytics", icon: Activity, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager"] },
       { name: "Leave", path: "/dashboard/leave", icon: CalendarClock, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
       { name: "Payroll", path: "/dashboard/payroll", icon: Banknote, roles: ["Admin", "HR Head", "HR Accountant"] },
-      { name: "Performance", path: "/dashboard/performance", icon: CheckSquare, roles: ["Admin", "HR Head", "HR Recruiter", "Manager", "Employee"] }
+      { name: "Performance", path: "/dashboard/performance", icon: CheckSquare, roles: ["Admin", "HR Head", "HR Recruiter", "Manager", "Employee"] },
+      { name: "Assets", path: "/dashboard/assets", icon: Package, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee"] }
     ]
   },
   {

@@ -53,6 +53,10 @@ router.use('/attendance/advanced', advancedAttendanceRoutes)
 const companyProjectRoutes = require('./companyProjectRoutes')
 router.use('/company-projects', companyProjectRoutes)
 
+// Asset Management Routes
+const assetRoutes = require("./assetRoutes");
+router.use("/assets-mgmt", assetRoutes);
+
 router.get('/me', verifyToken, (req, res) => {
     res.json({ success: true, user: req.user });
 })
