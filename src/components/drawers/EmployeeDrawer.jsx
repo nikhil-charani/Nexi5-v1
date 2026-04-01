@@ -15,6 +15,7 @@ const employeeSchema = z.object({
   manager: z.string().min(2, "Manager is required"),
   joiningDate: z.string().min(2, "Joining Date is required"),
   status: z.enum(["Active", "On Leave", "Suspended", "Resigned"]),
+  company: z.string().min(2, "Company is required"),
   basicSalary: z.number().min(0).optional(),
   allowances: z.number().min(0).optional(),
   workMode: z.enum(["Onsite", "Remote", "Hybrid"]).default("Onsite"),
@@ -42,6 +43,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit, title,
       manager: "",
       joiningDate: new Date().toISOString().split("T")[0],
       status: "Active",
+      company: "Nexi5",
       basicSalary: 60000,
       allowances: 10000,
       workMode: "Onsite",
@@ -61,6 +63,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit, title,
         manager: employeeToEdit.manager,
         joiningDate: employeeToEdit.joiningDate,
         status: employeeToEdit.status,
+        company: employeeToEdit.company || "Nexi5",
         basicSalary: employeeToEdit.basicSalary || 0,
         allowances: employeeToEdit.allowances || 0,
         workMode: employeeToEdit.workMode || "Onsite",
@@ -77,6 +80,7 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit, title,
         manager: "",
         joiningDate: new Date().toISOString().split("T")[0],
         status: "Active",
+        company: "Nexi5",
         basicSalary: 60000,
         allowances: 10000,
         workMode: "Onsite",
@@ -294,6 +298,28 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit, title,
                     <p className="mt-1 text-xs text-slate-400">
                       {isEditing ? "Corporate email cannot be changed." : "Login credentials will be sent to this email."}
                     </p>
+                    <!-- <p className="mt-1 text-xs text-slate-400">Login credentials will be sent to this email.</p> >
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Company Name</label>
+                    <input
+                      {...register("company")}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                      placeholder="e.g. Nexi5, Wipro, Amazon"
+                    />
+                    {errors.company && <p className="mt-1 text-xs text-rose-500">{errors.company.message}</p>}
+                    <p className="mt-1 text-xs text-slate-400">This determines the prefix for ID and temporary password (e.g., WIP, AMZ).</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Department</label>
+                    <input
+                      {...register("department")}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white dark:bg-slate-900 dark:text-white sm:text-sm outline-none transition-all"
+                      placeholder="e.g. Engineering"
+                    />
+                    {errors.department && <p className="mt-1 text-xs text-rose-500">{errors.department.message}</p>}
                   </div>
 
                   <div>

@@ -2,12 +2,22 @@ const { db, auth } = require("../config/firebase");
 const { sendEmployeeCredentials } = require("../config/emailService");
 
 /**
- * Generate a secure temporary password.
- * Format: Emp@XXXX (easy to read, meets most password policies)
+ * Derive a 3-character prefix from company name.
+ * Example: "Wipro" -> "WIP", "Amazon India" -> "AMZ", default -> "EMP"
  */
-const generateTempPassword = () => {
+const getCompanyPrefix = (companyName) => {
+    if (!companyName || typeof companyName !== "string") return "EMP";
+    const clean = companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return clean.slice(0, 3) || "EMP";
+};
+
+/**
+ * Generate a secure temporary password.
+ * Format: [PREFIX]@XXXX (easy to read, meets most password policies)
+ */
+const generateTempPassword = (prefix = "EMP") => {
     const suffix = Math.random().toString(36).slice(-6).toUpperCase();
-    return `Emp@${suffix}`;
+    return `${prefix}@${suffix}`;
 };
 
 /**
@@ -38,7 +48,7 @@ const createEmployee = async (req, res, next) => {
             gender = "",
             address = "",
             employeeType = "Full-time",
-            workMode = "Onsite",
+            company = "Nexi5",
         } = req.body;
 
         if (!email) {
@@ -50,14 +60,11 @@ const createEmployee = async (req, res, next) => {
         const firstName = parts[0] || "";
         const lastName = parts.slice(1).join(" ") || "";
 
-        // Check if email already exists in Firestore first
-        const emailCheck = await db.collection("employees").where("employeeData.email", "==", email).get();
-        if (!emailCheck.empty) {
-            return res.status(409).json({ success: false, error: "An employee with this email already exists." });
-        }
+        // 0. Determine Prefix
+        const prefix = getCompanyPrefix(company);
 
         // 1. Generate temp password
-        const tempPassword = generateTempPassword();
+        const tempPassword = generateTempPassword(prefix);
 
         // 2. Create Firebase Auth user
         let userRecord;
@@ -77,8 +84,17 @@ const createEmployee = async (req, res, next) => {
         // 3. Set role claim
         await auth.setCustomUserClaims(userRecord.uid, { role: "employee" });
 
-        // 4. Generate Employee ID
-        const employeeId = `EMP-${Date.now()}`;
+        // 4. Generate Employee ID (Prefix-XXXXX)
+        let numericPart;
+        if (company.toLowerCase() === "charani") {
+            const charaniSnap = await db.collection("employees").where("employeeData.company", "==", "Charani").get();
+            const nextSeq = (charaniSnap.size + 1).toString().padStart(2, "0");
+            numericPart = `738${nextSeq}`;
+        } else {
+            numericPart = Math.floor(10000 + Math.random() * 90000).toString(); // random 5-digit number
+        }
+
+        const employeeId = `${prefix}-${numericPart}`;
 
         // 5. Save to Firestore
         const employeeData = {
@@ -100,15 +116,19 @@ const createEmployee = async (req, res, next) => {
             basicSalary: Number(basicSalary),
             allowances: Number(allowances),
             employeeType,
-            workMode,
+            company,
             role: "employee",
             createdAt: new Date().toISOString(),
         };
 
         await db.collection("employees").doc(userRecord.uid).set({
             status: status.toLowerCase(),
+            mustChangePassword: true, // Force password change on first login
             leaveBalance: { casual: 12, sick: 10, annual: 15 },
-            employeeData,
+            employeeData: {
+                ...employeeData,
+                mustChangePassword: true
+            },
         });
 
         // 6. Send credentials email (Background)
@@ -120,6 +140,7 @@ const createEmployee = async (req, res, next) => {
             department,
             designation,
             joiningDate,
+            company,
         }).then(() => {
             console.log(`✅ Credentials email sent to ${email}`);
         }).catch((emailError) => {

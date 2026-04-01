@@ -25,3 +25,5 @@ ServiceAccountKey-prod.json
 *.njsproj
 *.sln
 *.sw?
+.env
+test_auth.cjs
