@@ -23,7 +23,7 @@ const createTransporter = () => {
  * Send employee credentials email.
  * Called when HR adds a new employee.
  */
-const sendEmployeeCredentials = async ({ toEmail, fullName, employeeId, tempPassword, department, designation, joiningDate }) => {
+const sendEmployeeCredentials = async ({ toEmail, fullName, employeeId, tempPassword, department, designation, joiningDate, company = "Nexi5" }) => {
     const transporter = createTransporter();
 
     const html = `
@@ -60,7 +60,7 @@ const sendEmployeeCredentials = async ({ toEmail, fullName, employeeId, tempPass
         <div class="body">
           <p class="greeting">Hello ${fullName},</p>
           <p class="text">
-            You have been added to the Nexi5 HRM platform by HR. 
+            You have been added to the ${company} platform on Nexi5 HRM by HR. 
             Below are your login credentials and employee details.
             Please log in and change your password immediately.
           </p>
@@ -112,9 +112,9 @@ const sendEmployeeCredentials = async ({ toEmail, fullName, employeeId, tempPass
 
     try {
         await transporter.sendMail({
-            from: `"Nexi5 HRM" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+            from: `"${company} (Nexi5 HRM)" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
             to: toEmail,
-            subject: `Welcome to Nexi5 HRM — Your Login Credentials [${employeeId}]`,
+            subject: `Welcome to ${company} — Your Login Credentials [${employeeId}]`,
             html,
         });
         console.log(`✅ Email sent successfully to ${toEmail}`);

@@ -1,4 +1,5 @@
 const { auth, db } = require("../config/firebase");
+const https = require("https");
 
 // Exact Role Definitions matched with Frontend Dashboard.jsx
 const VALID_ROLES = ["Admin", "HR Head", "HR Accountant", "HR Recruiter", "Manager", "BDE", "Employee"];
@@ -15,6 +16,137 @@ const ROLE_DASHBOARD_MAP = {
     "Manager":        "/dashboard",
     "BDE":            "/dashboard",
     "Employee":       "/dashboard",
+};
+
+/**
+ * Firebase Admin SDK can't verify passwords.
+ * We validate email/password using Firebase Identity Toolkit REST API.
+ */
+const verifyFirebasePassword = async (email, password) => {
+    const apiKey = process.env.FIREBASE_WEB_API_KEY;
+    if (!apiKey) {
+        throw new Error("FIREBASE_WEB_API_KEY is not configured on the backend.");
+    }
+
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(apiKey)}`;
+    const body = JSON.stringify({ email, password, returnSecureToken: true });
+
+    return new Promise((resolve, reject) => {
+        const req = https.request(
+            url,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(body),
+                },
+            },
+            (resp) => {
+                let raw = "";
+                resp.on("data", (chunk) => (raw += chunk));
+                resp.on("end", () => {
+                    let parsed = null;
+                    try {
+                        parsed = raw ? JSON.parse(raw) : null;
+                    } catch (_) {
+                        parsed = null;
+                    }
+
+                    // Treat success only when Firebase returned an idToken.
+                    if (resp.statusCode >= 200 && resp.statusCode < 300 && parsed?.idToken) {
+                        return resolve({ success: true });
+                    }
+
+                    const errorMessage = parsed?.error?.message || "UNKNOWN";
+                    const invalid =
+                        errorMessage === "INVALID_PASSWORD" ||
+                        errorMessage === "EMAIL_NOT_FOUND" ||
+                        errorMessage === "INVALID_LOGIN_CREDENTIALS" ||
+                        errorMessage === "USER_NOT_FOUND";
+
+                    return resolve({
+                        success: false,
+                        reason: invalid ? "INVALID_CREDENTIALS" : errorMessage,
+                    });
+                });
+            }
+        );
+
+        req.on("error", reject);
+        req.write(body);
+        req.end();
+    });
+};
+
+// Look up employee email based on employeeId/username typed in UI.
+const resolveEmployeeByEmployeeIdOrUsername = async (inputRaw) => {
+    const input = String(inputRaw ?? "").trim();
+    if (!input) return { email: null, employeeDocData: null };
+
+    // Accept any prefix by adding the input as-is.
+    // The previous logic was hardcoded to "EMP-", now we just use the input.
+    const normalizedInputs = [input, input.toUpperCase(), input.toLowerCase()];
+    
+    const inputsLower = normalizedInputs.map((v) => v.toLowerCase());
+
+    // 1) Try indexed Firestore queries first
+    for (const candidate of normalizedInputs) {
+        const usernameSnap = await db
+            .collection("employees")
+            .where("employeeData.username", "==", candidate)
+            .limit(1)
+            .get();
+        if (!usernameSnap.empty) {
+            const data = usernameSnap.docs[0].data();
+            return { email: data?.employeeData?.email, employeeDocData: data };
+        }
+
+        const empIdSnap = await db
+            .collection("employees")
+            .where("employeeData.employeeId", "==", candidate)
+            .limit(1)
+            .get();
+        if (!empIdSnap.empty) {
+            const data = empIdSnap.docs[0].data();
+            return { email: data?.employeeData?.email, employeeDocData: data };
+        }
+    }
+
+    // 2) Last-resort scan for older records + type/casing mismatch.
+    const scanSnap = await db.collection("employees").limit(500).get();
+    for (const doc of scanSnap.docs) {
+        const data = doc.data() || {};
+        const empData = data.employeeData || {};
+
+        const candidates = [
+            empData.username,
+            empData.employeeId,
+            data.username,
+            data.employeeId,
+        ].map((v) => String(v ?? "").trim().toLowerCase());
+
+        const match = candidates.some((c) => c && inputsLower.includes(c));
+        if (match) {
+            return {
+                email: empData.email || data?.email || null,
+                employeeDocData: data,
+            };
+        }
+    }
+
+    // 3) If input is email-like, allow direct email login
+    if (input.includes("@")) {
+        return { email: input, employeeDocData: null };
+    }
+
+    return { email: null, employeeDocData: null };
+};
+
+const getEmployeeRequiresPasswordChange = (employeeDocData) => {
+    if (!employeeDocData) return false;
+    // Check root and nested locations. Coerce to boolean.
+    const flag = !!(employeeDocData.mustChangePassword || (employeeDocData.employeeData && employeeDocData.employeeData.mustChangePassword));
+    return flag;
 };
 
 /**
@@ -130,43 +262,75 @@ const register = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
     try {
-        const { email } = req.body;
+        let { email, username, password } = req.body;
 
-        if (!email) {
-            return res.status(400).json({ success: false, error: "Email is required" });
+        if (!email && !username) {
+            return res.status(400).json({ success: false, error: "Email or username is required" });
+        }
+        if (!password) {
+            return res.status(400).json({ success: false, error: "Password is required" });
+        }
+
+        // Employee login: frontend sends `username` (employeeId/username) + password.
+        let employeeDocData = null;
+        if (username && !email) {
+            const resolved = await resolveEmployeeByEmployeeIdOrUsername(username);
+            email = resolved.email;
+            employeeDocData = resolved.employeeDocData;
+
+            if (!email) {
+                return res.status(401).json({
+                    success: false,
+                    error: "No employee found with this username. Please check your username or contact HR.",
+                });
+            }
+        }
+
+        // Verify password BEFORE returning success.
+        const authResult = await verifyFirebasePassword(email, password);
+        if (!authResult.success) {
+            return res.status(401).json({
+                success: false,
+                error: "Invalid username/email or password.",
+            });
         }
 
         // Look up Firebase Auth record
-        let userRecord;
-        try {
-            userRecord = await auth.getUserByEmail(email);
-        } catch (err) {
-            if (err.code === "auth/user-not-found") {
-                return res.status(401).json({
-                    success: false,
-                    error: "No account found with this email. Please register first.",
-                });
-            }
-            throw err;
-        }
+        const userRecord = await auth.getUserByEmail(email);
 
-        const role = userRecord.customClaims?.role || "Employee";
+        let role = userRecord.customClaims?.role || "Employee";
+        role = String(role);
+        if (role.toLowerCase() === "employee") role = "Employee";
 
-        // Fetch profile from appropriate collection
+        const dashboardPath = ROLE_DASHBOARD_MAP[role] || "/dashboard";
+
+        // Fetch profile + password-change flag from Firestore
         let profileData = {};
-        if (role === "Employee" || role === "employee") {
-            const empDoc = await db.collection("employees").doc(userRecord.uid).get();
-            if (empDoc.exists) {
-                profileData = empDoc.data()?.employeeData || {};
+        let requiresPasswordChange = false;
+
+        if (role === "Employee") {
+            if (employeeDocData) {
+                profileData = employeeDocData.employeeData || {};
+                requiresPasswordChange = getEmployeeRequiresPasswordChange(employeeDocData);
+                console.log(`[AUTH] Login as employee via ID match. ${email}. requiresPasswordChange=${requiresPasswordChange}`);
+            } else {
+                const empDoc = await db.collection("employees").doc(userRecord.uid).get();
+                if (empDoc.exists) {
+                    const data = empDoc.data();
+                    profileData = data?.employeeData || {};
+                    requiresPasswordChange = getEmployeeRequiresPasswordChange(data);
+                    console.log(`[AUTH] Login as employee via UID lookup. ${email}. requiresPasswordChange=${requiresPasswordChange}`);
+                }
             }
         } else {
             const staffDoc = await db.collection("Staff").doc(userRecord.uid).get();
             if (staffDoc.exists) {
-                profileData = staffDoc.data() || {};
+                const data = staffDoc.data();
+                profileData = data || {};
+                requiresPasswordChange = !!data?.mustChangePassword;
+                console.log(`[AUTH] Login as staff role: ${role}. ${email}. requiresPasswordChange=${requiresPasswordChange}`);
             }
         }
-
-        const dashboardPath = ROLE_DASHBOARD_MAP[role] || "/dashboard";
 
         return res.json({
             success: true,
@@ -180,10 +344,59 @@ const login = async (req, res, next) => {
             },
             token: `dev-token-${userRecord.uid}`,
             dashboardPath,
+            requiresPasswordChange,
         });
     } catch (error) {
         next(error);
     }
 };
 
-module.exports = { register, login };
+/**
+ * Change user password.
+ * Expects: { uid?, email?, newPassword }
+ */
+const changePassword = async (req, res, next) => {
+    try {
+        const { uid, email, newPassword } = req.body;
+
+        if ((!uid && !email) || !newPassword) {
+            return res.status(400).json({ success: false, error: "UID/Email and new password are required" });
+        }
+
+        let targetUid = uid;
+        if (!targetUid && email) {
+            const userRecord = await auth.getUserByEmail(email);
+            targetUid = userRecord.uid;
+        }
+
+        await auth.updateUser(targetUid, { password: newPassword });
+
+        // Clear mustChangePassword flag in Firestore
+        const empRef = db.collection("employees").doc(targetUid);
+        const empDoc = await empRef.get();
+
+        if (empDoc.exists) {
+            console.log(`[AUTH] Clearing mustChangePassword for employee: ${targetUid}`);
+            await empRef.update({
+                mustChangePassword: false,
+                "employeeData.mustChangePassword": false,
+            });
+        } else {
+            const staffRef = db.collection("Staff").doc(targetUid);
+            const staffDoc = await staffRef.get();
+            if (staffDoc.exists) {
+                await staffRef.update({ mustChangePassword: false });
+            }
+        }
+
+        return res.json({
+            success: true,
+            message: "Password updated successfully. You can now login with your new password.",
+        });
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+module.exports = { register, login, changePassword };

@@ -156,36 +156,37 @@ const checkout = async (req, res, next) => {
   }
 };
 
-const applyleave  = async (req,res,next) => {
-    try{
-        const uid= req.user.uid
-        const {fromdate,todate,reason} = req.body
-        if(!fromdate || !todate ||  !reason){
-               return res.status(400).json({
-                success: false,
-                message:"all field are required"
-               })
-        }
-      await db.collection("leaves").add({
-        uid:req.user.uid,
-        fromdate:fromdate,
-        todate:todate,
-        status:"pending",
-        leaveapplieddate:new Date().toISOString().split("T")[0]
-      })
-      res.json({
-        success: true,
-        message:"leave applied succesfully"
-      })
-    }
-    catch(error){
+const applyleave = async (req, res, next) => {
+    try {
+        const uid = req.user.uid;
+        const { startDate, endDate, reason, employeeName, department } = req.body;
+        
+        const leaveData = {
+            uid,
+            employeeId: uid,
+            employeeName: employeeName || "Unknown",
+            department: department || "",
+            startDate,
+            endDate,
+            reason,
+            status: "Pending",
+            appliedOn: new Date().toISOString().split("T")[0]
+        };
+        await db.collection("leaves").add(leaveData);
+        res.status(201).json({ success: true, message: "Applied successfully" });
+    } catch (error) { 
         console.error("applyleave Error:", error);
-        next(error)
+        next(error); 
     }
 }
 
 const approveleave = async (req, res, next) => {
     try {
+        const { role } = req.user;
+        if (role !== "Admin" && role !== "HR Head" && role !== "HR" && role !== "HR Accountant" && role !== "HR Recruiter") {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+        
         const { leaveId } = req.params;
         const leaveRef = db.collection("leaves").doc(leaveId);
         const leaveDoc = await leaveRef.get();
@@ -198,13 +199,18 @@ const approveleave = async (req, res, next) => {
         }
 
         await leaveRef.update({
-            status: "approved",
+            status: "Approved",
             updatedAt: new Date().toISOString()
         });
 
+        const updatedDoc = await leaveRef.get();
         res.json({
             success: true,
-            message: "Leave approved successfully"
+            message: "Leave approved successfully",
+            data: {
+                id: updatedDoc.id,
+                ...updatedDoc.data()
+            }
         });
     } catch (error) {
         console.error("approveleave Error:", error);
@@ -212,6 +218,44 @@ const approveleave = async (req, res, next) => {
     }
 }
 
+
+const rejectleave = async (req, res, next) => {
+    try {
+        const { role } = req.user;
+        if (role !== "Admin" && role !== "HR Head" && role !== "HR" && role !== "HR Accountant" && role !== "HR Recruiter") {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+        
+        const { leaveId } = req.params;
+        const leaveRef = db.collection("leaves").doc(leaveId);
+        const leaveDoc = await leaveRef.get();
+
+        if (!leaveDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "Leave request not found"
+            });
+        }
+
+        await leaveRef.update({
+            status: "Rejected",
+            updatedAt: new Date().toISOString()
+        });
+
+        const updatedDoc = await leaveRef.get();
+        res.json({
+            success: true,
+            message: "Leave rejected successfully",
+            data: {
+                id: updatedDoc.id,
+                ...updatedDoc.data()
+            }
+        });
+    } catch (error) {
+        console.error("rejectleave Error:", error);
+        next(error);
+    }
+};
 
 const getLeaves = async (req, res, next) => {
     try {
@@ -287,7 +331,6 @@ const getAttendanceHistory = async (req, res, next) => {
   try {
     console.log("Fetching attendance history for UID:", req.user?.uid);
     const uid = req.user.uid;
-    // Removed orderBy to avoid Firestore index requirement which often causes 500/400 errors if not set
     const snapshot = await db.collection("attendance")
       .where("employeeId", "==", uid)
       .get();
@@ -297,7 +340,6 @@ const getAttendanceHistory = async (req, res, next) => {
       ...doc.data()
     }));
 
-    // Sort manually if needed, or leave to frontend
     data.sort((a, b) => b.date.localeCompare(a.date));
 
     res.json({
@@ -310,7 +352,33 @@ const getAttendanceHistory = async (req, res, next) => {
   }
 };
 
+const getAttendanceHistoryByUid = async (req, res, next) => {
+  try {
+    const { uid } = req.params;
+    console.log("Fetching attendance history for target UID:", uid);
+    
+    const snapshot = await db.collection("attendance")
+      .where("employeeId", "==", uid)
+      .get();
 
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    data.sort((a, b) => b.date.localeCompare(a.date));
+
+    res.json({
+      success: true,
+      data: data
+    });
+  } catch (error) {
+    console.error("getAttendanceHistoryByUid Error:", error);
+    next(error);
+  }
+};
+
+<<<<<<< Lokesh
 const getAllAttendance = async (req, res, next) => {
   try {
     const snapshot = await db.collection("attendance").get();
@@ -329,6 +397,9 @@ const getAllAttendance = async (req, res, next) => {
 };
 
 module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAllAttendance };
+=======
+module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid };
+>>>>>>> main
 
 
 

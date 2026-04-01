@@ -231,16 +231,34 @@ export function AppProvider({ children }) {
     }
   };
 
-  const login = async (email, password, role) => {
+  const login = async (email, password, role, username) => {
     try {
+      const body = {};
+      if (role === "Employee" && username) {
+        body.username = username;
+      } else {
+        body.email = email;
+      }
+      body.password = password;
+
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(body)
       });
       const data = await response.json();
       
       if (data.success) {
+        if (data.requiresPasswordChange === true) {
+          return {
+            success: true,
+            requiresPasswordChange: true,
+            uid: data.user?.uid,
+            email: data.user?.email,
+            role: data.user?.role,
+          };
+        }
+
         let user = { ...data.user, token: data.token };
         if (role) user = { ...user, role };
         setIsLoggedIn(true);
@@ -252,6 +270,27 @@ export function AppProvider({ children }) {
       return { success: false, error: data.error };
     } catch (error) {
       console.error("Login error:", error);
+      return { success: false, error: "Network error" };
+    }
+  };
+
+  const changePassword = async (uidOrEmail, newPassword) => {
+    try {
+      const body = { newPassword };
+      if (uidOrEmail && uidOrEmail.includes("@")) {
+        body.email = uidOrEmail;
+      } else {
+        body.uid = uidOrEmail;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Change password error:", error);
       return { success: false, error: "Network error" };
     }
   };
@@ -393,8 +432,56 @@ export function AppProvider({ children }) {
   };
 
   const addLeave = (leave) => createItem("applyleave", leave, setLeaves);
-  const approveLeave = (id) => createItem(`approveleave/${id}`, {}, setLeaves, "POST");
-  const rejectLeave = (id) => updateItem("leaves", id, { status: "Rejected" }, setLeaves);
+  
+  const approveLeave = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/approveleave/${id}`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify({})
+      });
+      const resData = await response.json();
+      
+      if (!response.ok || resData.success === false) {
+        return { success: false, error: resData.error || resData.message || 'Failed to approve leave' };
+      }
+      
+      const updatedLeave = resData.data;
+      setLeaves(prev => prev.map(l => l.id === id ? { ...l, ...updatedLeave } : l));
+      return { success: true, data: updatedLeave };
+    } catch (error) {
+      console.error(`Error approving leave:`, error);
+      return { success: false, error: "Network error" };
+    }
+  };
+  
+  const rejectLeave = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rejectleave/${id}`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify({})
+      });
+      const resData = await response.json();
+      
+      if (!response.ok || resData.success === false) {
+        return { success: false, error: resData.error || resData.message || 'Failed to reject leave' };
+      }
+      
+      const updatedLeave = resData.data;
+      setLeaves(prev => prev.map(l => l.id === id ? { ...l, ...updatedLeave } : l));
+      return { success: true, data: updatedLeave };
+    } catch (error) {
+      console.error(`Error rejecting leave:`, error);
+      return { success: false, error: "Network error" };
+    }
+  };
   
   const addEmployee = (emp) => createItem("employees", emp, setEmployees);
   const updateEmployee = (id, data) => updateItem("update", id, data, setEmployees);
@@ -535,6 +622,88 @@ export function AppProvider({ children }) {
   const addDocument = (doc) => createItem("documents", doc, setDocuments);
   const deleteDocument = (id) => deleteItem("documents", id, setDocuments);
 
+  const getAttendanceHistoryForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/attendance/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch history failed:", e);
+      return [];
+    }
+  };
+
+  const getPayrollHistoryForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/payroll/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch payroll failed:", e);
+      return [];
+    }
+  };
+
+  const getPerformanceForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/performance/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch performance failed:", e);
+      return [];
+    }
+  };
+
+  const getDocumentsForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/documents/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch documents failed:", e);
+      return [];
+    }
+  };
+
+  const getTimelineForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/timeline/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch timeline failed:", e);
+      return [];
+    }
+  };
+
+  const fetchEmployeeById = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/getempbyid/${uid}`, { 
+        method: "POST", // The backend route matches post/get depending on index.js, but our index.js says router.post("/getempbyid/:uid")
+        headers: { 
+            "Authorization": `Bearer ${currentUser?.token}`,
+            "Content-Type": "application/json"
+        } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : null;
+    } catch (e) {
+      console.error("fetch employee failed:", e);
+      return null;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       employees, setEmployees, leaves, setLeaves,
@@ -546,7 +715,7 @@ export function AppProvider({ children }) {
       clients, setClients, addClient,
       deals, setDeals, addDeal, updateDeal,
       currentUser, userRole: currentUser?.role ?? null,
-      isLoggedIn, register, login, logout,
+      isLoggedIn, register, login, logout, changePassword,
       isCheckedIn, checkInTime, checkIn, checkOut,
       addLeave, approveLeave, rejectLeave,
       addEmployee, updateEmployee, deleteEmployee,
@@ -556,7 +725,9 @@ export function AppProvider({ children }) {
       notifications, announcements,
       tasks, addTask, updateTaskStatus, addAnnouncement,
       attendance, documents, addDocument, deleteDocument,
-      fetchPayslips, getPerformance, isLoading
+      fetchPayslips, getPerformance, isLoading,
+      getAttendanceHistoryForUser, fetchEmployeeById,
+      getPayrollHistoryForUser, getPerformanceForUser, getDocumentsForUser, getTimelineForUser
     }}>
       {children}
     </AppContext.Provider>
