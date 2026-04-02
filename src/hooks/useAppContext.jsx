@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { getCookie, setCookie, eraseCookie } from "../lib/cookieUtils";
 import { io } from "socket.io-client";
 
@@ -130,7 +131,7 @@ export function AppProvider({ children }) {
             case "attendanceStatus": 
               if (data && data.success) {
                 setIsCheckedIn(data.isCheckedIn);
-                setCheckInTime(data.checkInTime ? new Date(data.checkInTime) : null);
+                setCheckInTime(data.data?.checkin ? new Date(data.data.checkin) : null);
               }
               break;
           }
@@ -301,29 +302,72 @@ export function AppProvider({ children }) {
     eraseCookie("currentUser");
   };
 
-  const [isCheckedIn, setIsCheckedIn] = useState(() => {
-    try { const s = getCookie("checkInState"); return s?.isCheckedIn || false; } catch { return false; }
-  });
-  const [checkInTime, setCheckInTime] = useState(() => {
-    try { const s = getCookie("checkInState"); return s?.checkInTime ? new Date(s.checkInTime) : null; } catch { return null; }
-  });
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [checkInTime, setCheckInTime] = useState(null);
 
   const checkIn = async () => {
-    const now = new Date();
-    setIsCheckedIn(true);
-    setCheckInTime(now);
-    setCookie("checkInState", { isCheckedIn: true, checkInTime: now });
-    toast.success("Checked In", { description: `Session started at ${now.toLocaleTimeString()}` });
-    console.log("UI-only Check-in successful");
+    if (currentUser?.role?.toLowerCase() === "admin") {
+      toast.error("Admins are excluded from check-in");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/checkin`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify({ location: "office", notes: "" })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsCheckedIn(true);
+        const checkinTime = data.data?.checkin ? new Date(data.data.checkin) : new Date();
+        setCheckInTime(checkinTime);
+        const dateStr = checkinTime.toLocaleDateString('en-CA');
+        setCookie("checkInState", { isCheckedIn: true, checkInTime: checkinTime, date: dateStr });
+        const status = data.data?.status || "present";
+        toast.success("Checked In Successfully", { description: `Status: ${status.toUpperCase()} at ${checkinTime.toLocaleTimeString()}` });
+      } else {
+        toast.error(data.message || "Failed to check in");
+      }
+    } catch (err) {
+      console.error("Check-in error:", err);
+      toast.error("Failed to check in");
+    }
   };
 
   const checkOut = async () => {
     if (!isCheckedIn) return;
-    setIsCheckedIn(false);
-    setCheckInTime(null);
-    eraseCookie("checkInState");
-    toast.success("Checked Out", { description: `Session ended at ${new Date().toLocaleTimeString()}` });
-    console.log("UI-only Check-out successful");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/checkout`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsCheckedIn(false);
+        setCheckInTime(null);
+        eraseCookie("checkInState");
+        const hours = data.data?.totalHours || 0;
+        const status = data.data?.status || "present";
+        toast.success("Checked Out Successfully", { 
+          description: `Total Hours: ${hours}h | Status: ${status.toUpperCase()}` 
+        });
+      } else {
+        toast.error(data.message || "Failed to check out");
+      }
+    } catch (err) {
+      console.error("Check-out error:", err);
+      toast.error("Failed to check out");
+    }
   };
 
   const createItem = async (endpoint, item, setter, method = "POST") => {
@@ -578,6 +622,88 @@ export function AppProvider({ children }) {
   const addDocument = (doc) => createItem("documents", doc, setDocuments);
   const deleteDocument = (id) => deleteItem("documents", id, setDocuments);
 
+  const getAttendanceHistoryForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/attendance/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch history failed:", e);
+      return [];
+    }
+  };
+
+  const getPayrollHistoryForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/payroll/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch payroll failed:", e);
+      return [];
+    }
+  };
+
+  const getPerformanceForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/performance/history/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch performance failed:", e);
+      return [];
+    }
+  };
+
+  const getDocumentsForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/documents/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch documents failed:", e);
+      return [];
+    }
+  };
+
+  const getTimelineForUser = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/timeline/${uid}`, { 
+        headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : [];
+    } catch (e) {
+      console.error("fetch timeline failed:", e);
+      return [];
+    }
+  };
+
+  const fetchEmployeeById = async (uid) => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/getempbyid/${uid}`, { 
+        method: "POST", // The backend route matches post/get depending on index.js, but our index.js says router.post("/getempbyid/:uid")
+        headers: { 
+            "Authorization": `Bearer ${currentUser?.token}`,
+            "Content-Type": "application/json"
+        } 
+      });
+      const data = await resp.json();
+      return data.success ? data.data : null;
+    } catch (e) {
+      console.error("fetch employee failed:", e);
+      return null;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       employees, setEmployees, leaves, setLeaves,
@@ -599,7 +725,9 @@ export function AppProvider({ children }) {
       notifications, announcements,
       tasks, addTask, updateTaskStatus, addAnnouncement,
       attendance, documents, addDocument, deleteDocument,
-      fetchPayslips, getPerformance, isLoading
+      fetchPayslips, getPerformance, isLoading,
+      getAttendanceHistoryForUser, fetchEmployeeById,
+      getPayrollHistoryForUser, getPerformanceForUser, getDocumentsForUser, getTimelineForUser
     }}>
       {children}
     </AppContext.Provider>
