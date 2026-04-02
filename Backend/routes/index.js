@@ -71,6 +71,11 @@ router.use('/company-projects', companyProjectRoutes)
 const assetRoutes = require("./assetRoutes");
 router.use("/assets-mgmt", assetRoutes);
 
+// Concerns & Grievances Routes
+const concernsRoutes = require("./concernsRoutes");
+router.use("/concerns", concernsRoutes);
+router.use("/grievances", concernsRoutes); // Alias for compatibility
+
 router.get('/me', verifyToken, (req, res) => {
     res.json({ success: true, user: req.user });
 })
