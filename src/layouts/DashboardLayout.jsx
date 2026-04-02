@@ -27,7 +27,9 @@ import {
   ChevronRight,
   LogOut,
   User,
-  MoreVertical
+  MoreVertical,
+  Activity,
+  Package
 } from "lucide-react";
 import { getInitials } from "../lib/stringUtils";
 import Topbar from "../components/Topbar";
@@ -58,13 +60,15 @@ const navGroups = [
     name: "Work & Operations",
     color: "#0f4184",
     items: [
-      { name: "Projects", path: "/dashboard/projects", icon: FolderKanban, roles: ["Admin", "Manager", "Employee"] },
+      { name: "Projects & Modules", path: "/dashboard/projects", icon: FolderKanban, roles: ["Admin", "Manager", "Employee", "HR Head", "HR Accountant", "HR Recruiter"] },
       { name: "Tasks", path: "/dashboard/tasks", icon: ClipboardList, roles: ["Admin", "Manager", "Employee", "HR Recruiter", "HR Accountant"] },
       { name: "Documents", path: "/dashboard/documents", icon: FileText, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
       { name: "Attendance", path: "/dashboard/attendance", icon: UserCheck, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
+      { name: "Attendance Analytics", path: "/dashboard/attendance-analytics", icon: Activity, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager"] },
       { name: "Leave", path: "/dashboard/leave", icon: CalendarClock, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
       { name: "Payroll", path: "/dashboard/payroll", icon: Banknote, roles: ["Admin", "HR Head", "HR Accountant"] },
-      { name: "Performance", path: "/dashboard/performance", icon: CheckSquare, roles: ["Admin", "HR Head", "HR Recruiter", "Manager", "Employee"] }
+      { name: "Performance", path: "/dashboard/performance", icon: CheckSquare, roles: ["Admin", "HR Head", "HR Recruiter", "Manager", "Employee"] },
+      { name: "Assets", path: "/dashboard/assets", icon: Package, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee"] }
     ]
   },
   {
@@ -247,7 +251,7 @@ function DashboardLayout() {
                 className="absolute bottom-[calc(100%+8px)] left-3 right-3 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[60] overflow-hidden"
               >
                 {[
-                  { label: "Profile", icon: User, onClick: () => navigate(`/dashboard/employees/${currentUser?.id}`) },
+                  { label: "Profile", icon: User, onClick: () => navigate(`/dashboard/employees/${currentUser?.uid}`) },
                   { label: "Settings", icon: Settings, onClick: () => navigate('/dashboard/settings') },
                   { label: "Logout", icon: LogOut, onClick: handleLogout, danger: true }
                 ].map((item, i) => (

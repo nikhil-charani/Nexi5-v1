@@ -2,7 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-require("dotenv").config();
+const path = require("path");
+// Load backend environment from Backend/.env
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const routes = require("./routes/index");
 const { errorhandler,asynchandler} = require("./middleware/errorhandler");

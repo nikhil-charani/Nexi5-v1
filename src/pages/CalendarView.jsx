@@ -48,6 +48,42 @@ function CalendarView() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const formatDateKey = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  
+  const getWeekday = (day) => {
+    let d = new Date(year, month, day);
+    if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sunday -> Monday
+    if (d.getDay() === 6) d.setDate(d.getDate() - 1); // Saturday -> Friday
+    return d.getDate();
+  };
+
+  const today = new Date().getDate();
+
+  const SAMPLE_EVENTS = [
+    { id: "s1", title: "Independence Day", type: "holiday", date: `${year}-08-15`, description: "National Holiday" },
+    { id: "s2", title: "Christmas", type: "holiday", date: `${year}-12-25`, description: "Company Holiday" },
+    { id: "s3", title: "New Year", type: "holiday", date: `${year}-01-01`, description: "Company Holiday" },
+    { id: "s6", title: "Annual Day", type: "event", date: formatDateKey(getWeekday(15)), description: "Company annual celebration", time: "5:00 PM" },
+    { id: "s7", title: "HR Workshop", type: "event", date: formatDateKey(getWeekday(20)), description: "Policy updates", time: "10:00 AM" },
+    { id: "s8", title: "Team Sync", type: "meeting", date: formatDateKey(getWeekday(10)), description: "Weekly sync up", time: "11:00 AM" },
+    { id: "s9", title: "Project Review", type: "meeting", date: formatDateKey(getWeekday(12)), description: "Q3 Project milestones", time: "2:00 PM" }
+  ];
+
+  let allEvents = [...calendarEvents, ...SAMPLE_EVENTS].filter(e => e.type !== "leave");
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month, d);
+    const dayOfWeek = dateObj.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      allEvents.push({
+        id: `weekend-${year}-${month}-${d}`,
+        title: "Weekend",
+        type: "weekend",
+        date: formatDateKey(d),
+        description: "Weekly off"
+      });
+    }
+  }
+
   const eventsForDate = (d) => {
     const key = formatDateKey(d);
     return visibleEvents.filter((e) => e.date === key);
@@ -171,11 +207,12 @@ function CalendarView() {
             {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="min-h-[100px] border-b border-r border-slate-50 dark:border-slate-800/30 bg-slate-50/20 dark:bg-slate-950/10" />)}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
+              const dateObj = new Date(year, month, day);
+              const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
               const dateKey = formatDateKey(day);
               const dayEvents = eventsForDate(day);
               const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
               const isSelected = selectedDate === dateKey;
-              const isWeekend = new Date(year, month, day).getDay() === 0 || new Date(year, month, day).getDay() === 6;
               const cellBgClass = dayEvents.length > 0 
                 ? (eventTypeStyles[dayEvents[0].type]?.badge || eventTypeStyles.event.badge)
                 : (isWeekend ? eventTypeStyles.holiday.badge : (isSelected ? "bg-cyan-50/30 dark:bg-cyan-900/10" : "bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-800/30"));
@@ -269,8 +306,14 @@ function CalendarView() {
                       </button>
                     </div>
                   )}
+<<<<<<< Lokesh
+=======
                 </div>
-                <p className="font-black text-slate-800 dark:text-white text-sm leading-tight">{ev.title}</p>
+                <div className="flex justify-between items-start">
+                  <p className="font-black text-slate-800 dark:text-white text-sm leading-tight">{ev.title}</p>
+                  {ev.time && <span className="text-[10px] font-bold text-slate-500 bg-white/50 dark:bg-slate-900/50 px-2 py-0.5 rounded-md">{ev.time}</span>}
+>>>>>>> main
+                </div>
                 {ev.description && <p className="text-xs mt-2 text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{ev.description}</p>}
               </motion.div>;
             }) : <div className="py-8 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
@@ -315,11 +358,13 @@ function CalendarView() {
         }
         <div className="page-card p-5 bg-gradient-to-br from-cyan-50 dark:from-slate-900 to-transparent">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Color Map</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(eventTypeStyles).map(([type, style]) => <div key={type} className="flex items-center gap-2 p-1.5 rounded-lg border border-slate-50 dark:border-slate-800 bg-white/50 dark:bg-slate-800/30 shadow-sm">
-              <div className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-              <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate">{type}</span>
-            </div>)}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {Object.entries(eventTypeStyles).map(([type, style]) => (
+              <div key={type} className={`flex items-center gap-2 p-2 rounded-xl border border-slate-100 dark:border-slate-800/60 shadow-sm transition-all ${style.badge} bg-opacity-20`}>
+                <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${style.dot}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-90">{type}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

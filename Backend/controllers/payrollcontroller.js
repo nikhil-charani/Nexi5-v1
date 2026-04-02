@@ -58,4 +58,15 @@ const payslips = async (req,res) => {
 }
 
 
-module.exports={createpay,payslips}
+const getPayrollHistory = async (req,res) => {
+    try {
+        const { uid } = req.params;
+        const snapshot = await db.collection("payslips").where("uid", "==", uid).orderBy("year", "desc").orderBy("month", "desc").get();
+        const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json({ success: true, data: history });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+module.exports={createpay,payslips,getPayrollHistory}

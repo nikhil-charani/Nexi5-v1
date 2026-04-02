@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserCog, ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, UserCog, ChevronDown, User } from 'lucide-react';
 import { useAppContext } from '@/hooks/useAppContext';
 
 export default function LoginForm({ onLogin, onSwitchToRegister, roleOptions }) {
@@ -11,6 +10,9 @@ export default function LoginForm({ onLogin, onSwitchToRegister, roleOptions }) 
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isFirstLogin, setIsFirstLogin] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,12 +20,33 @@ export default function LoginForm({ onLogin, onSwitchToRegister, roleOptions }) 
             alert('Please select a role');
             return;
         }
+        if (role === 'Employee' && isFirstLogin) {
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters');
+                return;
+            }
+        }
+
         setIsLoading(true);
-        // Simulate loading
-        setTimeout(() => {
-            onLogin({ email, password, role });
+        try {
+            if (role === 'Employee') {
+                await onLogin({
+                    username: email, // employeeId typed in UI
+                    password,
+                    role,
+                    isFirstLogin,
+                    newPassword: isFirstLogin ? newPassword : undefined,
+                });
+            } else {
+                await onLogin({ email, password, role });
+            }
+        } finally {
             setIsLoading(false);
-        }, 800);
+        }
     };
 
     const inputClass = `w-full border rounded-lg py-3 pl-10 pr-4 text-xs transition-colors focus:outline-none ${isDarkMode
@@ -49,10 +72,14 @@ export default function LoginForm({ onLogin, onSwitchToRegister, roleOptions }) 
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <div className="relative">
-                    <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/50' : 'text-gray-400'}`} size={16} />
+                    {role === 'Employee' ? (
+                        <User className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/50' : 'text-gray-400'}`} size={16} />
+                    ) : (
+                        <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/50' : 'text-gray-400'}`} size={16} />
+                    )}
                     <input
-                        type="email"
-                        placeholder="Email Address"
+                        type={role === 'Employee' ? 'text' : 'email'}
+                        placeholder={role === 'Employee' ? 'Employee ID (EMP-...)' : 'Email Address'}
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         className={inputClass}
@@ -93,8 +120,59 @@ export default function LoginForm({ onLogin, onSwitchToRegister, roleOptions }) 
                     </button>
                 </div>
 
+                {role === 'Employee' && (
+                    <div className="flex items-center gap-2 mt-1">
+                        <input
+                            type="checkbox"
+                            id="firstLogin"
+                            checked={isFirstLogin}
+                            onChange={(e) => setIsFirstLogin(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="firstLogin" className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            First login? Change password
+                        </label>
+                    </div>
+                )}
+
+                {role === 'Employee' && isFirstLogin && (
+                    <>
+                        <div className="relative">
+                            <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/50' : 'text-gray-400'}`} size={16} />
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="New Password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className={inputClass}
+                                required
+                            />
+                        </div>
+                        <div className="relative">
+                            <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/50' : 'text-gray-400'}`} size={16} />
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Confirm New Password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className={inputClass}
+                                required
+                            />
+                        </div>
+                    </>
+                )}
+
                 <div className="flex justify-end">
-                    <Link to="#" className="text-primary dark:text-[#3ec3ff] text-[11px] font-bold hover:underline">Forgot password?</Link>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            // Keep simple for now; first-login flow uses the checkbox + new password fields.
+                            alert("Forgot password flow is not enabled in this UI yet.");
+                        }}
+                        className="text-primary dark:text-[#3ec3ff] text-[11px] font-bold hover:underline"
+                    >
+                        Forgot password?
+                    </button>
                 </div>
 
                 <button
@@ -114,15 +192,21 @@ export default function LoginForm({ onLogin, onSwitchToRegister, roleOptions }) 
             </form>
 
             <div className="text-center text-xs">
-                <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                    Don't have an account?{' '}
-                    <button
-                        onClick={onSwitchToRegister}
-                        className="text-primary dark:text-[#3ec3ff] font-bold hover:underline"
-                    >
-                        Register
-                    </button>
-                </p>
+                {role !== 'Employee' ? (
+                    <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        Don't have an account?{' '}
+                        <button
+                            onClick={onSwitchToRegister}
+                            className="text-primary dark:text-[#3ec3ff] font-bold hover:underline"
+                        >
+                            Register
+                        </button>
+                    </p>
+                ) : (
+                    <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        Employee accounts are created by HR. Contact HR if you don't have credentials.
+                    </p>
+                )}
             </div>
         </div>
     );
