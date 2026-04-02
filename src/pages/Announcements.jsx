@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Megaphone, Pin, Calendar, Tag, X } from "lucide-react";
-import { mockAnnouncements } from "../data/mockData";
+import { Plus, Megaphone, Pin, Calendar, Tag, X, Trash2 } from "lucide-react";
+import { useAppContext } from "../hooks/useAppContext";
 import { toast } from "sonner";
 const CATEGORY_STYLES = {
     "Holiday": { bg: "bg-[#0f4184]/10", text: "text-[#0b3166]", dot: "bg-[#0f4184]" },
@@ -9,31 +9,43 @@ const CATEGORY_STYLES = {
     "HR Announcement": { bg: "bg-cyan-50", text: "text-cyan-600", dot: "bg-cyan-500" },
     "General": { bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-400" }
 };
+
 function Announcements() {
-    const [announcements, setAnnouncements] = useState(mockAnnouncements);
+    const { announcements, addAnnouncement, deleteAnnouncement, userRole } = useAppContext();
     const [filterCat, setFilterCat] = useState("All");
     const [isModalOpen, setModalOpen] = useState(false);
     const [newAnn, setNewAnn] = useState({ title: "", content: "", category: "General" });
+    
+    const isAdmin = userRole?.toLowerCase().replace(/[_\s]+/g, " ") === "admin" || 
+                    userRole?.toLowerCase().replace(/[_\s]+/g, " ") === "hr head";
     const filtered = filterCat === "All" ? announcements : announcements.filter((a) => a.category === filterCat);
     const pinned = filtered.filter((a) => a.pinned);
     const rest = filtered.filter((a) => !a.pinned);
-    const postAnnouncement = () => {
+    
+    const postAnnouncement = async () => {
         if (!newAnn.title || !newAnn.content) {
             toast.error("Please fill all fields.");
             return;
         }
-        const ann = {
-            id: `ANN-${String(announcements.length + 1).padStart(3, "0")}`,
-            title: newAnn.title,
-            content: newAnn.content,
-            author: "HR Admin",
-            category: newAnn.category,
-            date: new Date().toISOString().split("T")[0]
-        };
-        setAnnouncements((prev) => [ann, ...prev]);
-        setModalOpen(false);
-        setNewAnn({ title: "", content: "", category: "General" });
-        toast.success("Announcement posted!");
+        const res = await addAnnouncement({ ...newAnn, pinned: false });
+        if (res.success) {
+            setModalOpen(false);
+            setNewAnn({ title: "", content: "", category: "General" });
+            toast.success("Announcement posted!");
+        } else {
+            toast.error(res.error || "Failed to post announcement");
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm("Are you sure you want to delete this announcement?")) {
+            const res = await deleteAnnouncement(id);
+            if (res?.success !== false) {
+                toast.success("Announcement deleted!");
+            } else {
+                toast.error(res?.error || "Failed to delete announcement");
+            }
+        }
     };
     const AnnouncementCard = ({ ann, index }) => {
         const style = CATEGORY_STYLES[ann.category];
@@ -51,11 +63,21 @@ function Announcements() {
                         {ann.pinned ? <Pin size={20} /> : <Megaphone size={20} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap mb-2">
-                            <h3 className="font-bold text-textPrimary text-base tracking-tight">{ann.title}</h3>
-                            {ann.pinned && <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-0.5 uppercase tracking-widest shadow-sm">
-                                Pinned
-                            </span>}
+                        <div className="flex items-center gap-3 flex-wrap mb-2 justify-between">
+                            <div>
+                                <h3 className="font-bold text-textPrimary text-base tracking-tight">{ann.title}</h3>
+                                {ann.pinned && <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-0.5 uppercase tracking-widest shadow-sm">
+                                    Pinned
+                                </span>}
+                            </div>
+                            {isAdmin && (
+                                <button 
+                                    onClick={() => handleDelete(ann.id)}
+                                    className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
                         </div>
                         <p className="text-textSecondary text-[13px] leading-relaxed font-medium">{ann.content}</p>
                         <div className="flex items-center gap-4 mt-5 flex-wrap pt-4 border-t border-gray-50">
@@ -63,10 +85,10 @@ function Announcements() {
                                 <Tag size={12} /> {ann.category}
                             </span>
                             <span className="flex items-center gap-1.5 text-[11px] text-gray-400 font-bold">
-                                <Calendar size={13} /> {ann.date}
+                                <Calendar size={13} /> {ann.date || new Date().toISOString().split("T")[0]}
                             </span>
                             <span className="text-[11px] text-gray-400 font-bold">
-                                By <span className="text-textPrimary">{ann.author}</span>
+                                By <span className="text-textPrimary">{ann.author || "HR Admin"}</span>
                             </span>
                         </div>
                     </div>
@@ -86,12 +108,14 @@ function Announcements() {
                 </div>
                 <p className="text-textSecondary text-sm font-medium">Company-wide news, holidays, and HR updates.</p>
             </div>
-            <button
-                onClick={() => setModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-bold shadow-sm bg-gradient-to-r from-[#0f4184] to-[#0b3166] hover:opacity-90 transition-all"
-            >
-                <Plus size={18} /> Post Announcement
-            </button>
+            {isAdmin && (
+                <button
+                    onClick={() => setModalOpen(true)}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-bold shadow-sm bg-gradient-to-r from-[#0f4184] to-[#0b3166] hover:opacity-90 transition-all"
+                >
+                    <Plus size={18} /> Post Announcement
+                </button>
+            )}
         </div>
 
         {
@@ -125,7 +149,7 @@ function Announcements() {
             /* Post Modal */
         }
         <AnimatePresence>
-            {isModalOpen && <div className="fixed inset-0 flex items-center justify-center z-[100] p-4">
+            {isModalOpen && isAdmin && <div className="fixed inset-0 flex items-center justify-center z-[100] p-4">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 30 }}

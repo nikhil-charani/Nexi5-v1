@@ -116,6 +116,13 @@ export function AppProvider({ children }) {
           });
           const data = await resp.json();
           return data.tasks || [];
+        },
+        announcements: async () => {
+          const resp = await fetch(`${API_BASE_URL}/announcements`, { 
+            headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+          });
+          const data = await resp.json();
+          return data.success ? data.data : [];
         }
       };
 
@@ -128,6 +135,7 @@ export function AppProvider({ children }) {
             case "attendanceHistory": setAttendance(data); break;
             case "calendarEvents": setCalendarEvents(data); break;
             case "tasks": setTasks(data); break;
+            case "announcements": setAnnouncements(data); break;
             case "attendanceStatus": 
               if (data && data.success) {
                 setIsCheckedIn(data.isCheckedIn);
@@ -599,6 +607,7 @@ export function AppProvider({ children }) {
   const updateTaskStatus = (id, status) => createItem("updatetaskstatus", { id, status }, setTasks);
   
   const addAnnouncement = (ann) => createItem("announcements", ann, setAnnouncements);
+  const deleteAnnouncement = (id) => deleteItem("announcements", id, setAnnouncements);
   const addPayroll = (data) => createItem("payroll", data, setPayroll);
   
   const fetchPayslips = async (uid) => {
@@ -722,6 +731,9 @@ export function AppProvider({ children }) {
       isDark, toggleDark, currentTheme, changeTheme,
       payroll, payrollTrendData, employeeGrowthData, departmentDistribution,
       attendanceTrendData, aiInsights, orgChartData, activityFeed,
+      notifications, announcements, addAnnouncement, deleteAnnouncement,
+      tasks, addTask, updateTaskStatus, attendance, documents, addDocument, deleteDocument,
+      fetchPayslips, getPerformance, isLoading
       notifications, announcements,
       tasks, addTask, updateTaskStatus, addAnnouncement,
       attendance, documents, addDocument, deleteDocument,
