@@ -733,10 +733,6 @@ export function AppProvider({ children }) {
       attendanceTrendData, aiInsights, orgChartData, activityFeed,
       notifications, announcements, addAnnouncement, deleteAnnouncement,
       tasks, addTask, updateTaskStatus, attendance, documents, addDocument, deleteDocument,
-      fetchPayslips, getPerformance, isLoading
-      notifications, announcements,
-      tasks, addTask, updateTaskStatus, addAnnouncement,
-      attendance, documents, addDocument, deleteDocument,
       fetchPayslips, getPerformance, isLoading,
       getAttendanceHistoryForUser, fetchEmployeeById,
       getPayrollHistoryForUser, getPerformanceForUser, getDocumentsForUser, getTimelineForUser

@@ -306,13 +306,10 @@ function CalendarView() {
                       </button>
                     </div>
                   )}
-<<<<<<< Lokesh
-=======
                 </div>
                 <div className="flex justify-between items-start">
                   <p className="font-black text-slate-800 dark:text-white text-sm leading-tight">{ev.title}</p>
                   {ev.time && <span className="text-[10px] font-bold text-slate-500 bg-white/50 dark:bg-slate-900/50 px-2 py-0.5 rounded-md">{ev.time}</span>}
->>>>>>> main
                 </div>
                 {ev.description && <p className="text-xs mt-2 text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{ev.description}</p>}
               </motion.div>;

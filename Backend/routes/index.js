@@ -1,25 +1,15 @@
 const express = require("express")
-const router=express.Router();
-const {admin,db} = require('../config/firebase')
-const {verifyToken} = require('../middleware/auth')
-const { register: registerUser, login: loginUser } = require('../controllers/authcontroller')
-const {createEmployee,getemployee,getemployeebyid,updateemployee} = require('../controllers/employeecontroller')
-const {checkin,checkout,applyleave,approveleave,getLeaves,getPendingLeaves,getAttendanceStatus,getAttendanceHistory,getAllAttendance} = require('../controllers/attendancecontroller')
-const {createpay,payslips}=require('../controllers/payrollcontroller')
-const {performance} = require('../controllers/performancecontroller')
-//employee routes
-const {createtask,gettasks,updatetaskstatus} = require('../controllers/taskcontroller')
-const {addEvent, getEvents, updateEvent, deleteEvent} = require('../controllers/calendarcontroller')
-const {getAnnouncements, createAnnouncement, deleteAnnouncement} = require('../controllers/announcementcontroller')
+const router = express.Router();
+const { verifyToken } = require('../middleware/auth')
+const { register: registerUser, login: loginUser, changePassword } = require('../controllers/authcontroller')
+const { createEmployee, getemployee, getemployeebyid, updateemployee, deleteemployee, getEmployeeDocuments, getEmployeeTimeline } = require('../controllers/employeecontroller')
+const { checkin, checkout, applyleave, approveleave, rejectleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid, getAllAttendance } = require('../controllers/attendancecontroller')
+const { createpay, payslips, getPayrollHistory } = require('../controllers/payrollcontroller')
+const { performance, getPerformanceHistory } = require('../controllers/performancecontroller')
+const { createtask, gettasks, updatetaskstatus } = require('../controllers/taskcontroller')
+const { addEvent, getEvents, updateEvent, deleteEvent } = require('../controllers/calendarcontroller')
+const { getAnnouncements, createAnnouncement, deleteAnnouncement } = require('../controllers/announcementcontroller')
 const { getAllUsers } = require('../controllers/usercontroller')
-const { register: registerUser, login: loginUser ,changePassword } = require('../controllers/authcontroller')
-const {createEmployee,getemployee,getemployeebyid,updateemployee,deleteemployee,getEmployeeDocuments,getEmployeeTimeline} = require('../controllers/employeecontroller')
-const {checkin,checkout,applyleave,approveleave,getLeaves,getPendingLeaves,getAttendanceStatus,getAttendanceHistory,getAttendanceHistoryByUid} = require('../controllers/attendancecontroller')
-const {createpay,payslips,getPayrollHistory}=require('../controllers/payrollcontroller')
-const {performance,getPerformanceHistory} = require('../controllers/performancecontroller')
-//employee routes
-const {createtask,gettasks,updatetaskstatus} = require('../controllers/taskcontroller')
-const {addEvent, getEvents, updateEvent, deleteEvent} = require('../controllers/calendarcontroller')
 
 
 // Auth routes — matches frontend's { name, email, password, role }

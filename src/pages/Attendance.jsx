@@ -4,59 +4,25 @@ import { useAppContext } from "../hooks/useAppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { DropdownMenu, DropdownMenuItem } from "../components/ui/dropdown";
 import { toast } from "sonner";
-<<<<<<< Lokesh
-const formatTime = (timeString) => {
-    if (!timeString) return "—";
-    return new Date(timeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return "—";
-    // Adjusting for timezone to ensure we get the right weekday
-    const date = new Date(dateString);
-    const tzDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-    return tzDate.toLocaleDateString(['en-US'], { weekday: 'short', month: 'short', day: 'numeric' });
-};
-
-const formatStatus = (status) => {
-    if (!status) return "—";
-    if (status === "half-day") return "Half Day";
-    return status.charAt(0).toUpperCase() + status.slice(1);
-};
-const STATUS_CLASS = {
-    Present: "bg-[#0f4184]/10 text-[#0b3166]",
-    "On Leave": "bg-orange-100 text-orange-600",
-    "Half Day": "bg-blue-100 text-blue-600",
-    Late: "bg-yellow-100 text-yellow-600",
-    Absent: "bg-red-100 text-red-600"
-=======
 
 const STATUS_CLASS = {
     Present: "bg-blue-50 text-blue-700 border-blue-100",
     "On Leave": "bg-orange-50 text-orange-700 border-orange-100",
     "Half Day": "bg-sky-50 text-sky-700 border-sky-100",
+    Late: "bg-yellow-100 text-yellow-600 border-yellow-100",
     Absent: "bg-red-50 text-red-700 border-red-100"
->>>>>>> main
 };
 
 const STATUS_DOT = {
     Present: "bg-blue-500",
     "On Leave": "bg-orange-500",
-<<<<<<< Lokesh
-    "Half Day": "bg-blue-500",
-    Late: "bg-yellow-500",
-=======
     "Half Day": "bg-sky-500",
->>>>>>> main
+    Late: "bg-yellow-500",
     Absent: "bg-red-500"
 };
 
 function Attendance() {
-<<<<<<< Lokesh
-    const { attendance, isCheckedIn, checkIn, checkOut, userRole } = useAppContext();
-=======
     const { isCheckedIn, checkInTime, checkIn, checkOut, userRole, attendance, currentUser } = useAppContext();
->>>>>>> main
     const [exporting, setExporting] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [elapsedTime, setElapsedTime] = useState("00:00:00");
@@ -133,17 +99,6 @@ function Attendance() {
     });
 
     const isAdminOrHR = ["Admin", "HR", "HR Head", "HR Accountant", "HR Recruiter"].includes(userRole);
-<<<<<<< Lokesh
-
-    const historyData = (attendance || []).map(item => ({
-        date: formatDate(item.date),
-        checkIn: formatTime(item.checkin),
-        checkOut: formatTime(item.checkout),
-        hours: item.totalHours ? `${Math.floor(item.totalHours)}h ${Math.round((item.totalHours % 1) * 60)}m` : (item.checkout ? "0h" : "—"),
-        status: formatStatus(item.status)
-    }));
-    const handleCheckInToggle = () => {
-=======
     
     // Finished progress calculation if not checked in
     useEffect(() => {
@@ -160,7 +115,6 @@ function Attendance() {
             toast.error("Day Complete", { description: "You have already completed your shift today." });
             return;
         }
->>>>>>> main
         if (isCheckedIn) {
             await checkOut();
         } else {

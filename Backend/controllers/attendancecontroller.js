@@ -378,7 +378,6 @@ const getAttendanceHistoryByUid = async (req, res, next) => {
   }
 };
 
-<<<<<<< Lokesh
 const getAllAttendance = async (req, res, next) => {
   try {
     const snapshot = await db.collection("attendance").get();
@@ -396,10 +395,7 @@ const getAllAttendance = async (req, res, next) => {
   }
 };
 
-module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAllAttendance };
-=======
-module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid };
->>>>>>> main
+module.exports = { checkin, checkout, applyleave, approveleave, rejectleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid, getAllAttendance };
 
 
 
