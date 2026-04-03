@@ -71,6 +71,12 @@ const getStatus = (checkin, totalHours = 0) => {
  */
 const getAttendanceSummary = async (req, res, next) => {
     try {
+        const userRoleLower = (req.user.role || "").toLowerCase();
+        const isAdminOrManager = userRoleLower === "admin" || userRoleLower === "manager";
+        if (!isAdminOrManager && !userRoleLower.startsWith("hr")) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+        }
+
         const today = new Date().toISOString().split("T")[0];
         const [empSnap, staffSnap, attendanceSnap] = await Promise.all([
             db.collection("employees").get(),
@@ -109,6 +115,12 @@ const getAttendanceSummary = async (req, res, next) => {
  */
 const getAttendanceDaily = async (req, res, next) => {
     try {
+        const userRoleLower = (req.user.role || "").toLowerCase();
+        const isAdminOrManager = userRoleLower === "admin" || userRoleLower === "manager";
+        if (!isAdminOrManager && !userRoleLower.startsWith("hr")) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+        }
+
         const date = req.query.date || format(new Date(), "yyyy-MM-dd");
         const [empSnap, staffSnap, projectMap, attendanceSnap] = await Promise.all([
             db.collection("employees").get(),
@@ -158,6 +170,12 @@ const getAttendanceDaily = async (req, res, next) => {
  */
 const getMonthlyAttendance = async (req, res, next) => {
     try {
+        const userRoleLower = (req.user.role || "").toLowerCase();
+        const isAdminOrManager = userRoleLower === "admin" || userRoleLower === "manager";
+        if (!isAdminOrManager && !userRoleLower.startsWith("hr")) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+        }
+
         const monthStr = req.query.month || format(new Date(), "yyyy-MM");
         const startDate = `${monthStr}-01`;
         const endDate = `${monthStr}-31`; 
@@ -235,6 +253,12 @@ const getMonthlyAttendance = async (req, res, next) => {
  */
 const getProjectSummary = async (req, res, next) => {
     try {
+        const userRoleLower = (req.user.role || "").toLowerCase();
+        const isAdminOrManager = userRoleLower === "admin" || userRoleLower === "manager";
+        if (!isAdminOrManager && !userRoleLower.startsWith("hr")) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+        }
+
         const monthStr = req.query.month || format(new Date(), "yyyy-MM");
         const startDate = `${monthStr}-01`;
         const endDate = `${monthStr}-31`;

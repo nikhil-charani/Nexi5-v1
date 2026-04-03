@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { getCookie, setCookie, eraseCookie } from "../lib/cookieUtils";
 import { io } from "socket.io-client";
@@ -53,11 +53,17 @@ export function AppProvider({ children }) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchInProgress = useRef(false);
+
   // Fetch all data from backend on mount
   useEffect(() => {
     const doFetch = async () => {
-      if (!isLoggedIn) return;
+      if (!isLoggedIn || !currentUser?.token || fetchInProgress.current) return;
+      
+      fetchInProgress.current = true;
       setIsLoading(true);
+      
+      console.log("🚀 Initializing global data fetch...");
 
       const fetchers = {
         employees: async () => {
@@ -123,6 +129,13 @@ export function AppProvider({ children }) {
           });
           const data = await resp.json();
           return data.success ? data.data : [];
+        },
+        grievances: async () => {
+          const resp = await fetch(`${API_BASE_URL}/concerns`, { 
+            headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+          });
+          const data = await resp.json();
+          return data.success ? data.data : [];
         }
       };
 
@@ -136,6 +149,7 @@ export function AppProvider({ children }) {
             case "calendarEvents": setCalendarEvents(data); break;
             case "tasks": setTasks(data); break;
             case "announcements": setAnnouncements(data); break;
+            case "grievances": setGrievances(data); break;
             case "attendanceStatus": 
               if (data && data.success) {
                 setIsCheckedIn(data.isCheckedIn);
@@ -593,8 +607,8 @@ export function AppProvider({ children }) {
     }
   };
 
-  const addGrievance = (g) => createItem("grievances", g, setGrievances);
-  const updateGrievanceStatus = (id, status) => updateItem("grievances", id, { status }, setGrievances);
+  const addGrievance = (g) => createItem("concerns", g, setGrievances);
+  const updateGrievanceStatus = (id, status) => updateItem("concerns", id, { status }, setGrievances);
   
   const addLead = (lead) => createItem("leads", lead, setLeads);
   const updateLead = (id, data) => updateItem("leads", id, data, setLeads);
