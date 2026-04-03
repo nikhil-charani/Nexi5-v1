@@ -50,4 +50,25 @@ const deleteAnnouncement = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { getAnnouncements, createAnnouncement, deleteAnnouncement };
+/**
+ * Update an announcement (Admin/HR Head only)
+ */
+const updateAnnouncement = async (req, res, next) => {
+  try {
+    const role = (req.user?.role || "").toLowerCase().replace(/[_\s]+/g, " ").trim();
+    if (role !== "admin" && role !== "hr head") {
+      return res.status(403).json({ success: false, message: "Only Admin or HR Head can edit" });
+    }
+    const { title, content, category } = req.body;
+    await db.collection("announcements").doc(req.params.id).update({
+        title,
+        content,
+        category: category || "General",
+        updatedAt: new Date().toISOString()
+    });
+    const updatedDoc = await db.collection("announcements").doc(req.params.id).get();
+    res.status(200).json({ success: true, message: "Updated successfully", data: { id: updatedDoc.id, ...updatedDoc.data() } });
+  } catch (error) { next(error); }
+};
+
+module.exports = { getAnnouncements, createAnnouncement, deleteAnnouncement, updateAnnouncement };

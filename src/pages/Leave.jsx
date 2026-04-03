@@ -38,7 +38,9 @@ function Leave() {
         let data = baseLeaves;
         if (statusFilter !== "All") data = data.filter((l) => l.status === statusFilter);
         if (search) data = data.filter(
-            (l) => l.employeeName.toLowerCase().includes(search.toLowerCase()) || l.type.toLowerCase().includes(search.toLowerCase()) || l.reason.toLowerCase().includes(search.toLowerCase())
+            (l) => (l.employeeName || "").toLowerCase().includes(search.toLowerCase()) || 
+                   (l.type || "").toLowerCase().includes(search.toLowerCase()) || 
+                   (l.reason || "").toLowerCase().includes(search.toLowerCase())
         );
         return data;
     }, [baseLeaves, statusFilter, search]);
@@ -176,16 +178,16 @@ function Leave() {
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0f4184] to-[#0b3166] text-white flex items-center justify-center text-sm font-bold shadow-sm">
-                                        {leave.employeeName.charAt(0)}
+                                        {String(leave?.employeeName || "Unknown").charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="text-[13px] font-bold text-textPrimary">{leave.employeeName}</p>
-                                        <p className="text-[11px] text-textSecondary font-medium">{leave.department}</p>
+                                        <p className="text-[13px] font-bold text-textPrimary">{leave.employeeName || "Unknown Employee"}</p>
+                                        <p className="text-[11px] text-textSecondary font-medium">{leave.department || "No Department"}</p>
                                     </div>
                                 </div>
                             </td>
                             <td className="px-6 py-4">
-                                <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">{leave.type}</span>
+                                <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">{leave.type || "Sick Leave"}</span>
                             </td>
                             <td className="px-6 py-4 text-textSecondary font-medium">{leave.startDate}</td>
                             <td className="px-6 py-4 text-textSecondary font-medium">{leave.endDate}</td>
@@ -198,10 +200,16 @@ function Leave() {
                             </td>
                             <td className="px-6 py-4 text-textSecondary text-xs font-medium">{leave.appliedOn}</td>
                             <td className="px-6 py-4">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[leave.status].bg} ${STATUS_COLORS[leave.status].text}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[leave.status].dot}`} />
-                                    {leave.status}
-                                </span>
+                                {(() => {
+                                    const statusVal = leave.status ? (leave.status.charAt(0).toUpperCase() + leave.status.slice(1).toLowerCase()) : "Pending";
+                                    const colors = STATUS_COLORS[statusVal] || STATUS_COLORS.Pending;
+                                    return (
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${colors.bg} ${colors.text}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
+                                            {statusVal}
+                                        </span>
+                                    );
+                                })()}
                             </td>
                             {canApprove && <td className="px-6 py-4 text-right">
                                 {leave.status === "Pending" ? <DropdownMenu trigger={<button className="p-2 text-gray-400 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors">

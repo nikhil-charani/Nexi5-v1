@@ -607,6 +607,7 @@ export function AppProvider({ children }) {
   const updateTaskStatus = (id, status) => createItem("updatetaskstatus", { id, status }, setTasks);
   
   const addAnnouncement = (ann) => createItem("announcements", ann, setAnnouncements);
+  const updateAnnouncement = (id, ann) => updateItem("announcements", id, ann, setAnnouncements);
   const deleteAnnouncement = (id) => deleteItem("announcements", id, setAnnouncements);
   const addPayroll = (data) => createItem("payroll", data, setPayroll);
   
@@ -731,7 +732,7 @@ export function AppProvider({ children }) {
       isDark, toggleDark, currentTheme, changeTheme,
       payroll, payrollTrendData, employeeGrowthData, departmentDistribution,
       attendanceTrendData, aiInsights, orgChartData, activityFeed,
-      notifications, announcements, addAnnouncement, deleteAnnouncement,
+      notifications, announcements, addAnnouncement, updateAnnouncement, deleteAnnouncement,
       tasks, addTask, updateTaskStatus, attendance, documents, addDocument, deleteDocument,
       fetchPayslips, getPerformance, isLoading,
       getAttendanceHistoryForUser, fetchEmployeeById,

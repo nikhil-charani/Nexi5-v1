@@ -192,7 +192,7 @@ Password: ${newCredentials.password}`);
               <td className="px-8 py-5 text-right">
                 <div className="flex justify-end gap-2 transition-opacity">
                   <button
-                    onClick={() => navigate(`/dashboard/employees/${emp.employeeId || emp.uid || emp.id}`)}
+                    onClick={() => navigate(`/dashboard/employees/${emp.uid || emp.employeeId || emp.id}`)}
                     className="p-2 text-slate-300 hover:text-[#0f4184] transition-colors"
                   >
                     <Eye size={16} />

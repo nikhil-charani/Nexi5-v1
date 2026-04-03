@@ -8,7 +8,7 @@ const { createpay, payslips, getPayrollHistory } = require('../controllers/payro
 const { performance, getPerformanceHistory } = require('../controllers/performancecontroller')
 const { createtask, gettasks, updatetaskstatus } = require('../controllers/taskcontroller')
 const { addEvent, getEvents, updateEvent, deleteEvent } = require('../controllers/calendarcontroller')
-const { getAnnouncements, createAnnouncement, deleteAnnouncement } = require('../controllers/announcementcontroller')
+const { getAnnouncements, createAnnouncement, deleteAnnouncement, updateAnnouncement } = require('../controllers/announcementcontroller')
 const { getAllUsers } = require('../controllers/usercontroller')
 
 
@@ -57,7 +57,7 @@ router.delete('/calendar/delete-event/:id', verifyToken, deleteEvent)
 router.get('/announcements', verifyToken, getAnnouncements)
 router.post('/announcements', verifyToken, createAnnouncement)
 router.delete('/announcements/:id', verifyToken, deleteAnnouncement)
-
+router.put('/announcements/:id', verifyToken, updateAnnouncement)
 
 // Advanced Attendance Analytics
 const advancedAttendanceRoutes = require('./advancedAttendanceRoutes')

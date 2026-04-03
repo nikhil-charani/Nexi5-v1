@@ -87,8 +87,21 @@ const createEmployee = async (req, res, next) => {
         // 4. Generate Employee ID (Prefix-XXXXX)
         let numericPart;
         if (company.toLowerCase() === "charani") {
-            const charaniSnap = await db.collection("employees").where("employeeData.company", "==", "Charani").get();
-            const nextSeq = (charaniSnap.size + 1).toString().padStart(2, "0");
+            const charaniSnap = await db.collection("employees").get();
+            let maxSeq = 0;
+            charaniSnap.docs.forEach(doc => {
+                const empData = doc.data().employeeData || {};
+                const comp = (empData.company || "").toLowerCase();
+                if (comp === "charani") {
+                    const eid = empData.employeeId || "";
+                    const match = eid.match(/738(\d+)/);
+                    if (match) {
+                        const seq = parseInt(match[1], 10);
+                        if (seq > maxSeq) maxSeq = seq;
+                    }
+                }
+            });
+            const nextSeq = (maxSeq + 1).toString().padStart(2, "0");
             numericPart = `738${nextSeq}`;
         } else {
             numericPart = Math.floor(10000 + Math.random() * 90000).toString(); // random 5-digit number

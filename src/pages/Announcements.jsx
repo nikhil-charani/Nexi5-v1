@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Megaphone, Pin, Calendar, Tag, X, Trash2 } from "lucide-react";
+import { Plus, Megaphone, Pin, Calendar, Tag, X, Trash2, Pencil } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 import { toast } from "sonner";
 const CATEGORY_STYLES = {
@@ -11,9 +11,10 @@ const CATEGORY_STYLES = {
 };
 
 function Announcements() {
-    const { announcements, addAnnouncement, deleteAnnouncement, userRole } = useAppContext();
+    const { announcements, addAnnouncement, updateAnnouncement, deleteAnnouncement, userRole } = useAppContext();
     const [filterCat, setFilterCat] = useState("All");
     const [isModalOpen, setModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     const [newAnn, setNewAnn] = useState({ title: "", content: "", category: "General" });
     
     const isAdmin = userRole?.toLowerCase().replace(/[_\s]+/g, " ") === "admin" || 
@@ -27,14 +28,36 @@ function Announcements() {
             toast.error("Please fill all fields.");
             return;
         }
-        const res = await addAnnouncement({ ...newAnn, pinned: false });
-        if (res.success) {
-            setModalOpen(false);
-            setNewAnn({ title: "", content: "", category: "General" });
-            toast.success("Announcement posted!");
+        
+        if (editingId) {
+            const res = await updateAnnouncement(editingId, { ...newAnn });
+            if (res.success) {
+                closeModal();
+                toast.success("Announcement updated!");
+            } else {
+                toast.error(res.error || "Failed to update announcement");
+            }
         } else {
-            toast.error(res.error || "Failed to post announcement");
+            const res = await addAnnouncement({ ...newAnn, pinned: false });
+            if (res.success) {
+                closeModal();
+                toast.success("Announcement posted!");
+            } else {
+                toast.error(res.error || "Failed to post announcement");
+            }
         }
+    };
+    
+    const closeModal = () => {
+        setModalOpen(false);
+        setEditingId(null);
+        setNewAnn({ title: "", content: "", category: "General" });
+    };
+
+    const handleEditClick = (ann) => {
+        setNewAnn({ title: ann.title, content: ann.content, category: ann.category, pinned: ann.pinned });
+        setEditingId(ann.id);
+        setModalOpen(true);
     };
 
     const handleDelete = async (id) => {
@@ -71,12 +94,22 @@ function Announcements() {
                                 </span>}
                             </div>
                             {isAdmin && (
-                                <button 
-                                    onClick={() => handleDelete(ann.id)}
-                                    className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        onClick={() => handleEditClick(ann)}
+                                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-500 transition-all"
+                                        title="Edit Announcement"
+                                    >
+                                        <Pencil size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDelete(ann.id)}
+                                        className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-all"
+                                        title="Delete Announcement"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             )}
                         </div>
                         <p className="text-textSecondary text-[13px] leading-relaxed font-medium">{ann.content}</p>
@@ -150,7 +183,7 @@ function Announcements() {
         }
         <AnimatePresence>
             {isModalOpen && isAdmin && <div className="fixed inset-0 flex items-center justify-center z-[100] p-4">
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModal} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 30 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -159,10 +192,10 @@ function Announcements() {
                 >
                     <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                         <div>
-                            <h2 className="text-xl font-bold text-textPrimary">Post Announcement</h2>
-                            <p className="text-xs text-textSecondary mt-1 font-medium">Visible to all employees immediately.</p>
+                            <h2 className="text-xl font-bold text-textPrimary">{editingId ? "Edit Announcement" : "Post Announcement"}</h2>
+                            <p className="text-xs text-textSecondary mt-1 font-medium">{editingId ? "Modify the existing announcement." : "Visible to all employees immediately."}</p>
                         </div>
-                        <button onClick={() => setModalOpen(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-all">
+                        <button onClick={closeModal} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-all">
                             <X size={20} />
                         </button>
                     </div>
@@ -198,12 +231,12 @@ function Announcements() {
                         </div>
                     </div>
                     <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
-                        <button onClick={() => setModalOpen(false)} className="px-6 py-2.5 text-sm font-bold text-textSecondary hover:bg-gray-100 rounded-lg transition-all">Cancel</button>
+                        <button onClick={closeModal} className="px-6 py-2.5 text-sm font-bold text-textSecondary hover:bg-gray-100 rounded-lg transition-all">Cancel</button>
                         <button
                             onClick={postAnnouncement}
                             className="px-8 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-gradient-to-r from-[#0f4184] to-[#0b3166] hover:opacity-90 transition-all"
                         >
-                            Publish Announcement
+                            {editingId ? "Save Changes" : "Publish Announcement"}
                         </button>
                     </div>
                 </motion.div>

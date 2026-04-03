@@ -159,21 +159,22 @@ const checkout = async (req, res, next) => {
 const applyleave = async (req, res, next) => {
     try {
         const uid = req.user.uid;
-        const { startDate, endDate, reason, employeeName, department } = req.body;
+        const { startDate, endDate, reason, employeeName, department, type } = req.body;
         
         const leaveData = {
             uid,
             employeeId: uid,
             employeeName: employeeName || "Unknown",
             department: department || "",
+            type: type || "Sick Leave",
             startDate,
             endDate,
             reason,
             status: "Pending",
             appliedOn: new Date().toISOString().split("T")[0]
         };
-        await db.collection("leaves").add(leaveData);
-        res.status(201).json({ success: true, message: "Applied successfully" });
+        const docRef = await db.collection("leaves").add(leaveData);
+        res.status(201).json({ success: true, message: "Applied successfully", data: { id: docRef.id, ...leaveData } });
     } catch (error) { 
         console.error("applyleave Error:", error);
         next(error); 
@@ -259,12 +260,31 @@ const rejectleave = async (req, res, next) => {
 
 const getLeaves = async (req, res, next) => {
     try {
-        const uid = req.user.uid;
-        const leaves = await db.collection("leaves").where("uid", "==", uid).get();
-        const data = leaves.docs.map(doc => ({
+        const { uid, role } = req.user;
+        let leavesSnapshot;
+        
+        const isHR = ["Admin", "HR Head", "HR", "HR Accountant", "HR Recruiter"].includes(role);
+        const isManager = role === "Manager";
+
+        if (isHR || isManager) {
+            leavesSnapshot = await db.collection("leaves").get();
+        } else {
+            // Employee only sees their own leaves
+            leavesSnapshot = await db.collection("leaves").where("uid", "==", uid).get();
+        }
+        
+        const data = leavesSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
+        
+        // Sort by appliedOn descending
+        data.sort((a, b) => {
+             const dateA = a.appliedOn ? new Date(a.appliedOn) : new Date(0);
+             const dateB = b.appliedOn ? new Date(b.appliedOn) : new Date(0);
+             return dateB - dateA;
+        });
+
         res.json({
             success: true,
             data
