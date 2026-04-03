@@ -131,8 +131,10 @@ function DashboardLayout() {
     return (
       <div className="flex flex-col h-full">
         {/* Logo Section */}
-        <div className={`h-[140px] flex items-center justify-center shrink-0 border-b border-gray-100/50 transition-all duration-300 relative ${isSidebarOpen || mobile ? "px-6" : "px-2"}`}>
-          <div className="flex items-center justify-start h-full w-full overflow-hidden">
+        {/* <div className={`h-[140px] flex items-center justify-center shrink-0 border-b border-gray-100/50 transition-all duration-300 relative ${isSidebarOpen || mobile ? "px-6" : "px-2"}`}>
+          <div className="flex items-center justify-start h-full w-full overflow-hidden"> */}
+            <div className={`flex items-center justify-center shrink-0 border-b border-gray-100/50 transition-all duration-300 relative ${isSidebarOpen || mobile ? "h-[140px] px-6" : "h-[100px] px-2"}`}>
+          <div className="flex items-center justify-center h-full w-full overflow-hidden">
             <img
               src={brandLogo}
               alt="Nexi5 Logo"
@@ -141,6 +143,8 @@ function DashboardLayout() {
               style={{ cursor: 'pointer' }}
             />
           </div>
+      
+
           {mobile ? (
             <button onClick={() => setMobileSidebarOpen(false)} className="absolute right-4 p-2 rounded-xl bg-gray-50 text-slate-400 hover:text-primary transition-all">
               <X size={20} />
