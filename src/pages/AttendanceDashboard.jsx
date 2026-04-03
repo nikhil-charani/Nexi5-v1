@@ -128,7 +128,7 @@ const AttendanceDashboard = () => {
         <div>
           <div className="flex items-center gap-3 mb-1 text-primary">
             <Building2 size={24} className="shrink-0" />
-            <h1 className="text-2xl font-bold tracking-tight text-textPrimary">Attendance Analytics</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-textPrimary">Attendance Management</h1>
           </div>
           <p className="text-textSecondary text-sm">Advanced workforce monitoring and project-based productivity</p>
         </div>

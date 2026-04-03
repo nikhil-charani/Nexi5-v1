@@ -64,7 +64,7 @@ const navGroups = [
       { name: "Tasks", path: "/dashboard/tasks", icon: ClipboardList, roles: ["Admin", "Manager", "Employee", "HR Recruiter", "HR Accountant"] },
       { name: "Documents", path: "/dashboard/documents", icon: FileText, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
       { name: "Attendance", path: "/dashboard/attendance", icon: UserCheck, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
-      { name: "Attendance Analytics", path: "/dashboard/attendance-analytics", icon: Activity, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager"] },
+      { name: "Attendance Management", path: "/dashboard/attendance-management", icon: Activity, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager"] },
       { name: "Leave", path: "/dashboard/leave", icon: CalendarClock, roles: ["Admin", "HR Head", "HR Recruiter", "HR Accountant", "Manager", "Employee", "BDE"] },
       { name: "Payroll", path: "/dashboard/payroll", icon: Banknote, roles: ["Admin", "HR Head", "HR Accountant"] },
       { name: "Performance", path: "/dashboard/performance", icon: CheckSquare, roles: ["Admin", "HR Head", "HR Recruiter", "Manager", "Employee"] },
