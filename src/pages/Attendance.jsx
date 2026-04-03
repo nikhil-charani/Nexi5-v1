@@ -9,6 +9,7 @@ const STATUS_CLASS = {
     Present: "bg-blue-50 text-blue-700 border-blue-100",
     "On Leave": "bg-orange-50 text-orange-700 border-orange-100",
     "Half Day": "bg-sky-50 text-sky-700 border-sky-100",
+    Late: "bg-yellow-100 text-yellow-600 border-yellow-100",
     Absent: "bg-red-50 text-red-700 border-red-100"
 };
 
@@ -16,6 +17,7 @@ const STATUS_DOT = {
     Present: "bg-blue-500",
     "On Leave": "bg-orange-500",
     "Half Day": "bg-sky-500",
+    Late: "bg-yellow-500",
     Absent: "bg-red-500"
 };
 

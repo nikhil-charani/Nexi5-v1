@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { getCookie, setCookie, eraseCookie } from "../lib/cookieUtils";
 import { io } from "socket.io-client";
 
@@ -52,11 +53,17 @@ export function AppProvider({ children }) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchInProgress = useRef(false);
+
   // Fetch all data from backend on mount
   useEffect(() => {
     const doFetch = async () => {
-      if (!isLoggedIn) return;
+      if (!isLoggedIn || !currentUser?.token || fetchInProgress.current) return;
+      
+      fetchInProgress.current = true;
       setIsLoading(true);
+      
+      console.log("🚀 Initializing global data fetch...");
 
       const fetchers = {
         employees: async () => {
@@ -115,6 +122,20 @@ export function AppProvider({ children }) {
           });
           const data = await resp.json();
           return data.tasks || [];
+        },
+        announcements: async () => {
+          const resp = await fetch(`${API_BASE_URL}/announcements`, { 
+            headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+          });
+          const data = await resp.json();
+          return data.success ? data.data : [];
+        },
+        grievances: async () => {
+          const resp = await fetch(`${API_BASE_URL}/concerns`, { 
+            headers: { "Authorization": `Bearer ${currentUser?.token}` } 
+          });
+          const data = await resp.json();
+          return data.success ? data.data : [];
         }
       };
 
@@ -127,10 +148,12 @@ export function AppProvider({ children }) {
             case "attendanceHistory": setAttendance(data); break;
             case "calendarEvents": setCalendarEvents(data); break;
             case "tasks": setTasks(data); break;
+            case "announcements": setAnnouncements(data); break;
+            case "grievances": setGrievances(data); break;
             case "attendanceStatus": 
               if (data && data.success) {
                 setIsCheckedIn(data.isCheckedIn);
-                setCheckInTime(data.checkInTime ? new Date(data.checkInTime) : null);
+                setCheckInTime(data.data?.checkin ? new Date(data.data.checkin) : null);
               }
               break;
           }
@@ -301,29 +324,72 @@ export function AppProvider({ children }) {
     eraseCookie("currentUser");
   };
 
-  const [isCheckedIn, setIsCheckedIn] = useState(() => {
-    try { const s = getCookie("checkInState"); return s?.isCheckedIn || false; } catch { return false; }
-  });
-  const [checkInTime, setCheckInTime] = useState(() => {
-    try { const s = getCookie("checkInState"); return s?.checkInTime ? new Date(s.checkInTime) : null; } catch { return null; }
-  });
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [checkInTime, setCheckInTime] = useState(null);
 
   const checkIn = async () => {
-    const now = new Date();
-    setIsCheckedIn(true);
-    setCheckInTime(now);
-    setCookie("checkInState", { isCheckedIn: true, checkInTime: now });
-    toast.success("Checked In", { description: `Session started at ${now.toLocaleTimeString()}` });
-    console.log("UI-only Check-in successful");
+    if (currentUser?.role?.toLowerCase() === "admin") {
+      toast.error("Admins are excluded from check-in");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/checkin`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
+        body: JSON.stringify({ location: "office", notes: "" })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsCheckedIn(true);
+        const checkinTime = data.data?.checkin ? new Date(data.data.checkin) : new Date();
+        setCheckInTime(checkinTime);
+        const dateStr = checkinTime.toLocaleDateString('en-CA');
+        setCookie("checkInState", { isCheckedIn: true, checkInTime: checkinTime, date: dateStr });
+        const status = data.data?.status || "present";
+        toast.success("Checked In Successfully", { description: `Status: ${status.toUpperCase()} at ${checkinTime.toLocaleTimeString()}` });
+      } else {
+        toast.error(data.message || "Failed to check in");
+      }
+    } catch (err) {
+      console.error("Check-in error:", err);
+      toast.error("Failed to check in");
+    }
   };
 
   const checkOut = async () => {
     if (!isCheckedIn) return;
-    setIsCheckedIn(false);
-    setCheckInTime(null);
-    eraseCookie("checkInState");
-    toast.success("Checked Out", { description: `Session ended at ${new Date().toLocaleTimeString()}` });
-    console.log("UI-only Check-out successful");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/checkout`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsCheckedIn(false);
+        setCheckInTime(null);
+        eraseCookie("checkInState");
+        const hours = data.data?.totalHours || 0;
+        const status = data.data?.status || "present";
+        toast.success("Checked Out Successfully", { 
+          description: `Total Hours: ${hours}h | Status: ${status.toUpperCase()}` 
+        });
+      } else {
+        toast.error(data.message || "Failed to check out");
+      }
+    } catch (err) {
+      console.error("Check-out error:", err);
+      toast.error("Failed to check out");
+    }
   };
 
   const createItem = async (endpoint, item, setter, method = "POST") => {
@@ -541,8 +607,8 @@ export function AppProvider({ children }) {
     }
   };
 
-  const addGrievance = (g) => createItem("grievances", g, setGrievances);
-  const updateGrievanceStatus = (id, status) => updateItem("grievances", id, { status }, setGrievances);
+  const addGrievance = (g) => createItem("concerns", g, setGrievances);
+  const updateGrievanceStatus = (id, status) => updateItem("concerns", id, { status }, setGrievances);
   
   const addLead = (lead) => createItem("leads", lead, setLeads);
   const updateLead = (id, data) => updateItem("leads", id, data, setLeads);
@@ -555,6 +621,7 @@ export function AppProvider({ children }) {
   const updateTaskStatus = (id, status) => createItem("updatetaskstatus", { id, status }, setTasks);
   
   const addAnnouncement = (ann) => createItem("announcements", ann, setAnnouncements);
+  const deleteAnnouncement = (id) => deleteItem("announcements", id, setAnnouncements);
   const addPayroll = (data) => createItem("payroll", data, setPayroll);
   
   const fetchPayslips = async (uid) => {
@@ -678,9 +745,8 @@ export function AppProvider({ children }) {
       isDark, toggleDark, currentTheme, changeTheme,
       payroll, payrollTrendData, employeeGrowthData, departmentDistribution,
       attendanceTrendData, aiInsights, orgChartData, activityFeed,
-      notifications, announcements,
-      tasks, addTask, updateTaskStatus, addAnnouncement,
-      attendance, documents, addDocument, deleteDocument,
+      notifications, announcements, addAnnouncement, deleteAnnouncement,
+      tasks, addTask, updateTaskStatus, attendance, documents, addDocument, deleteDocument,
       fetchPayslips, getPerformance, isLoading,
       getAttendanceHistoryForUser, fetchEmployeeById,
       getPayrollHistoryForUser, getPerformanceForUser, getDocumentsForUser, getTimelineForUser

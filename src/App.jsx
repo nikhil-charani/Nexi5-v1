@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import Directory from "./pages/Directory";
 import OrgChart from "./pages/OrgChart";
+import AttendanceDashboard from "./pages/AttendanceDashboard";
 import Tasks from "./pages/Tasks";
 import Announcements from "./pages/Announcements";
 import CalendarView from "./pages/CalendarView";
@@ -27,6 +28,7 @@ import Clients from "./pages/Clients";
 import Deals from "./pages/Deals";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/auth/AuthPage";
+import Assets from "./pages/assets/Assets";
 import ScrollToTop from "./components/common/ScrollToTop";
 import LoadingScreen from "./components/common/LoadingScreen";
 import { useState } from "react";
@@ -62,6 +64,7 @@ const AppRoutes = () => {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="candidates" element={<Candidates />} />
           <Route path="attendance" element={<Attendance />} />
+          <Route path="attendance-management" element={<AttendanceDashboard />} />
           <Route path="leave" element={<Leave />} />
           <Route path="payroll" element={<Payroll />} />
           <Route path="performance" element={<Performance />} />
@@ -77,6 +80,7 @@ const AppRoutes = () => {
           <Route path="leads" element={<Leads />} />
           <Route path="clients" element={<Clients />} />
           <Route path="deals" element={<Deals />} />
+          <Route path="assets" element={<Assets />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

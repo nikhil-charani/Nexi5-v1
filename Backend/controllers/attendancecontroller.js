@@ -5,101 +5,156 @@ const {db}= require("../config/firebase")
 
 const checkin = async (req, res, next) => {
   try {
-    console.log("Processing check-in for UID:", req.user?.uid);
-    const { location, notes } = req.body;
-    const today = new Date().toISOString().split("T")[0];
-    const docId = `${req.user.uid}_${today}`;
+    const uid = req.user?.uid;
+    const { location, notes } = req.body || {};
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const docId = `${uid}_${today}`;
     
-    console.log("Checking for existing check-in, docId:", docId);
+    // 1. Structural Deduplication (One record per day)
     const existing = await db.collection("attendance").doc(docId).get();
-
     if (existing.exists && existing.data()?.checkin) {
-      console.log("User already checked in today:", docId);
       return res.status(400).json({
         success: false,
-        message: "Already check in today",
+        message: "Already checked in today",
         clockInTime: existing.data().checkin,
       });
     }
 
+    // Fetch employee details for dual-write
+    let name = "Unknown";
+    let department = "Unknown";
+    try {
+      const empDoc = await db.collection("employees").doc(uid).get();
+      if (empDoc.exists) {
+        const empData = empDoc.data()?.employeeData || empDoc.data();
+        name = empData.firstName ? `${empData.firstName} ${empData.lastName}`.trim() : empData.name || "Unknown";
+        department = empData.department || "Unknown";
+      }
+    } catch (e) {
+      console.warn("Failed to fetch employee details for checkin:", e);
+    }
+
+    // 2. Late Logic (after 09:30 AM)
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const isLate = hour > 9 || (hour === 9 && minute > 30);
+    const status = isLate ? "late" : "present";
+
     const attendanceData = {
-      employeeId: req.user.uid,
+      employeeId: uid,
+      name: name,
+      role: req.user?.role || "Employee",
+      department: department,
       date: today,
-      checkin: new Date().toISOString(),
+      month: today.slice(0, 7),
+      checkin: now.toISOString(),
       checkout: null,
-      totalHours: null,
-      status: "present",
+      totalHours: 0,
+      status: status,
+      isLate: isLate,
+      isHalfDay: false,
       location: location || "office",
       notes: notes || "",
-      createdAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
     };
 
-    console.log("Saving new attendance record:", docId);
     await db.collection("attendance").doc(docId).set(attendanceData);
+
+    // Dual-write strategy
+    try {
+      await db.collection("daily_attendance").doc(docId).set(attendanceData);
+    } catch (e) {
+      console.error("Failed to write to daily_attendance collection:", e);
+    }
+
+    // 3. Real-time Bridge
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("attendance:update", { 
+        type: "checkin", 
+        uid, 
+        name: req.user?.name || "Employee",
+        status: status 
+      });
+    }
 
     res.status(201).json({
       success: true,
-      message: "Checkin in successfully",
-      data: {
-        id: docId,
-        employeeId: req.user.uid,
-        date: today,
-        checkin: attendanceData.checkin,
-        location: attendanceData.location,
-      },
+      message: "Check-in successful",
+      data: attendanceData,
     });
-
   } catch (error) {
-    console.error("checkin Error:", error);
     next(error);
   }
 };
 
+const checkout = async (req, res, next) => {
+  try {
+    const uid = req.user?.uid;
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const docId = `${uid}_${today}`;
+    const attendanceRef = db.collection("attendance").doc(docId);
+    const doc = await attendanceRef.get();
+      
+    if (!doc.exists || !doc.data()?.checkin) {
+      return res.status(400).json({ success: false, message: "No check-in record found for today" });
+    }
 
-const checkout  = async (req,res,next) => {
+    if (doc.data()?.checkout) {
+      return res.status(400).json({ success: false, message: "Already checked out today" });
+    }
+
+    const checkinTime = new Date(doc.data().checkin);
+    const checkoutTime = now;
+    const totalMs = checkoutTime.getTime() - checkinTime.getTime();
+    const totalHours = parseFloat((totalMs / (1000 * 60 * 60)).toFixed(2));
+    
+    // Half-day logic (< 4 hours)
+    const isHalfDay = totalHours < 4;
+    const currentStatus = doc.data().status;
+    let finalStatus = currentStatus;
+    if (isHalfDay) finalStatus = "half-day";
+
+    const updateData = {
+      checkout: checkoutTime.toISOString(),
+      totalHours: totalHours,
+      isHalfDay: isHalfDay,
+      status: finalStatus,
+      updatedAt: checkoutTime.toISOString()
+    };
+
+    await attendanceRef.update(updateData);
+
+    // Dual-write strategy
     try {
-          const today = new Date().toISOString().split("T")[0]  
-          const docid = `${req.user.uid}_${today}`
-          const sri= db.collection("attendance").doc(docid)
-          const person = await sri.get()
-            
-          if(!person.exists || !person.data()?.checkin){
-            return res.json({
-                message:"you have not checkin today",
-                success:false
-            })
-          }
-          if(person.data()?.checkout){
-            return res.json({
-                success:false,
-                message:"employee already check out",
-                checkout:person.data().checkout
-            })
-          }
+      await db.collection("daily_attendance").doc(docId).update(updateData);
+    } catch (e) {
+      console.error("Failed to update daily_attendance collection:", e);
+    }
 
-          //calcualte total time
-          const checkoutTime = new Date().toISOString()
-          const totalms = new Date(checkoutTime).getTime()-new Date(person.data().checkin).getTime()
-          const totalhours= parseFloat((totalms/(1000*60*60)).toFixed(2))
-          await sri.update({
-              checkout:checkoutTime,
-              totalHours:totalhours,
-              updatedAt:new Date().toISOString()
-          })
-          res.status(200).json({
-            success:true,
-            message:"successfully checkout",
-            today:today,
-            checkin:person.data().checkin,
-            checkout:checkoutTime,
-            totalhours:totalhours
-          })
+    // Real-time Bridge
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("attendance:update", { 
+        type: "checkout", 
+        uid, 
+        name: req.user?.name || "Employee",
+        totalHours,
+        status: finalStatus
+      });
     }
-    catch(error){
-        console.error("checkout Error:", error);
-        next(error)
-    }
-}
+
+    res.status(200).json({
+      success: true,
+      message: "Check-out successful",
+      data: { ...doc.data(), ...updateData }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const applyleave = async (req, res, next) => {
     try {
@@ -323,7 +378,24 @@ const getAttendanceHistoryByUid = async (req, res, next) => {
   }
 };
 
-module.exports = { checkin, checkout, applyleave, approveleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid };
+const getAllAttendance = async (req, res, next) => {
+  try {
+    const snapshot = await db.collection("attendance").get();
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error("getAllAttendance Error:", error);
+    res.status(500).json({ success: false, message: "Error fetching attendance" });
+  }
+};
+
+module.exports = { checkin, checkout, applyleave, approveleave, rejectleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid, getAllAttendance };
 
 
 

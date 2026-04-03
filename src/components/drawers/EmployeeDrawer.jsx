@@ -298,7 +298,6 @@ export default function EmployeeDrawer({ isOpen, onClose, employeeToEdit, title,
                     <p className="mt-1 text-xs text-slate-400">
                       {isEditing ? "Corporate email cannot be changed." : "Login credentials will be sent to this email."}
                     </p>
-                    <!-- <p className="mt-1 text-xs text-slate-400">Login credentials will be sent to this email.</p> >
                   </div>
 
                   <div>

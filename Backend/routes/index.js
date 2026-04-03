@@ -1,15 +1,16 @@
 const express = require("express")
-const router=express.Router();
-const {admin,db} = require('../config/firebase')
-const {verifyToken} = require('../middleware/auth')
-const { register: registerUser, login: loginUser ,changePassword } = require('../controllers/authcontroller')
-const {createEmployee,getemployee,getemployeebyid,updateemployee,deleteemployee,getEmployeeDocuments,getEmployeeTimeline} = require('../controllers/employeecontroller')
-const {checkin,checkout,applyleave,approveleave,getLeaves,getPendingLeaves,getAttendanceStatus,getAttendanceHistory,getAttendanceHistoryByUid} = require('../controllers/attendancecontroller')
-const {createpay,payslips,getPayrollHistory}=require('../controllers/payrollcontroller')
-const {performance,getPerformanceHistory} = require('../controllers/performancecontroller')
-//employee routes
-const {createtask,gettasks,updatetaskstatus} = require('../controllers/taskcontroller')
-const {addEvent, getEvents, updateEvent, deleteEvent} = require('../controllers/calendarcontroller')
+const router = express.Router();
+const { verifyToken } = require('../middleware/auth')
+const { register: registerUser, login: loginUser, changePassword } = require('../controllers/authcontroller')
+const { createEmployee, getemployee, getemployeebyid, updateemployee, deleteemployee, getEmployeeDocuments, getEmployeeTimeline } = require('../controllers/employeecontroller')
+const { checkin, checkout, applyleave, approveleave, rejectleave, getLeaves, getPendingLeaves, getAttendanceStatus, getAttendanceHistory, getAttendanceHistoryByUid, getAllAttendance } = require('../controllers/attendancecontroller')
+const { createpay, payslips, getPayrollHistory } = require('../controllers/payrollcontroller')
+const { performance, getPerformanceHistory } = require('../controllers/performancecontroller')
+const { createtask, gettasks, updatetaskstatus } = require('../controllers/taskcontroller')
+const { addEvent, getEvents, updateEvent, deleteEvent } = require('../controllers/calendarcontroller')
+const { getAnnouncements, createAnnouncement, deleteAnnouncement } = require('../controllers/announcementcontroller')
+const { getAllUsers } = require('../controllers/usercontroller')
+
 
 // Auth routes — matches frontend's { name, email, password, role }
 router.post("/register", registerUser)
@@ -17,6 +18,9 @@ router.post("/login", loginUser)
 router.post("/change-password", changePassword)
 
 router.post("/employees",createEmployee)
+router.get("/employees", getemployee)
+router.get("/emp", getemployee)
+router.get("/users", getAllUsers)
 router.delete("/employees/:uid",verifyToken,deleteemployee)
 router.post("/getemp",verifyToken,getemployee)
 router.post("/getempbyid/:uid",verifyToken,getemployeebyid)
@@ -30,6 +34,7 @@ router.get('/leaves',verifyToken,getLeaves)
 router.get('/leaves/pending',verifyToken,getPendingLeaves)
 router.get('/attendance/status',verifyToken,getAttendanceStatus)
 router.get('/attendance/history',verifyToken,getAttendanceHistory)
+router.get('/attendance', getAllAttendance)
 router.get('/attendance/history/:uid',verifyToken,getAttendanceHistoryByUid)
 router.post('/payroll',createpay)
 router.post('/payslips',payslips)
@@ -47,6 +52,30 @@ router.post('/calendar/add-event', verifyToken, addEvent)
 router.get('/calendar/events', verifyToken, getEvents)
 router.put('/calendar/update-event/:id', verifyToken, updateEvent)
 router.delete('/calendar/delete-event/:id', verifyToken, deleteEvent)
+
+// Announcement Routes
+router.get('/announcements', verifyToken, getAnnouncements)
+router.post('/announcements', verifyToken, createAnnouncement)
+router.delete('/announcements/:id', verifyToken, deleteAnnouncement)
+
+
+// Advanced Attendance Analytics
+const advancedAttendanceRoutes = require('./advancedAttendanceRoutes')
+router.use('/attendance/advanced', advancedAttendanceRoutes)
+
+// Company Project Management (NEW — isolated module)
+const companyProjectRoutes = require('./companyProjectRoutes')
+router.use('/company-projects', companyProjectRoutes)
+
+// Asset Management Routes
+const assetRoutes = require("./assetRoutes");
+router.use("/assets-mgmt", assetRoutes);
+
+// Concerns & Grievances Routes
+const concernsRoutes = require("./concernsRoutes");
+router.use("/concerns", concernsRoutes);
+router.use("/grievances", concernsRoutes); // Alias for compatibility
+
 router.get('/me', verifyToken, (req, res) => {
     res.json({ success: true, user: req.user });
 })
